@@ -5,7 +5,12 @@ Geographically Parameterized Outdoor Routing
 
 Idea:
 Find the optimal way to walk through your favorite outdoor region.
-
+Where optimal is defined by:
+ - view (relative height to surroundings)
+ - elevation
+ - walking distance
+ - steepness
+ - 
 
 
 
