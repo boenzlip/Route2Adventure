@@ -162,8 +162,8 @@ public class App {
    * @return a new Style instance to render the image in greyscale
    */
   private Style createGreyscaleStyle(int band) {
-    ContrastEnhancement ce = sf.contrastEnhancement(ff.literal(1.0),
-        ContrastMethod.NORMALIZE);
+    ContrastEnhancement ce = sf.contrastEnhancement(ff.literal(0.8),
+        ContrastMethod.NONE);
     SelectedChannelType sct = sf.createSelectedChannelType(
         String.valueOf(band), ce);
 
