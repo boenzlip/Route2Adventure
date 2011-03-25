@@ -1,5 +1,7 @@
 package net.orxonox.gpr;
 
+import java.awt.Color;
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -17,11 +19,14 @@ import org.geotools.map.DefaultMapContext;
 import org.geotools.map.MapContext;
 import org.geotools.referencing.CRS;
 import org.geotools.styling.ChannelSelection;
+import org.geotools.styling.ColorMap;
+import org.geotools.styling.ColorMapImpl;
 import org.geotools.styling.ContrastEnhancement;
 import org.geotools.styling.RasterSymbolizer;
 import org.geotools.styling.SLD;
 import org.geotools.styling.SelectedChannelType;
 import org.geotools.styling.Style;
+import org.geotools.styling.StyleBuilder;
 import org.geotools.styling.StyleFactory;
 import org.geotools.styling.Symbolizer;
 import org.geotools.swing.JMapFrame;
@@ -103,6 +108,24 @@ public class App {
       // return;
     }
 
+    // http://maps.google.ch/maps/mm?ie=UTF8&hl=de&ll=46.545284,6.87212&spn=0.096341,0.187969&t=h&z=13
+    // http://maps.google.ch/maps/mm?ie=UTF8&hl=de&ll=46.227828,7.897797&spn=0.096903,0.187969&t=h&z=13\
+    Envelope env = coverage.getEnvelope();
+    double x = env.getMedian(0);
+    double y = env.getMedian(1);
+    for (int i = 0; i < 50; i++) {
+      double[] dest = new double[3];
+      // gridGeometry.toPoint2D(coord), dest
+      Object point = (Object) coverage.evaluate(new Point2D.Double(x, y), dest);
+      System.out.println(y + ", " + x + ", " + dest[0]);
+      x += i * 0.001;
+    }
+
+    // This can be used to render images.
+    // coverage.getRenderedImage();
+
+    // GridGeometry2D geo = coverage.getGridGeometry();
+
     // Set up a MapContext with the two layers
 
     // Create a JMapFrame with a menu to choose the display style for the
@@ -115,10 +138,26 @@ public class App {
     frame.enableToolBar(true);
 
     map.setTitle("ImageLab");
-    map.addLayer(coverage, createGreyscaleStyle(reader));
+    // map.addLayer(coverage, createGreyscaleStyle(reader));
+    map.addLayer(coverage, createColoredStyle());
 
     // Now display the map
     frame.setVisible(true);
+  }
+
+  private Style createColoredStyle() {
+    StyleBuilder sb = new StyleBuilder();
+    ColorMap cm = sb.createColorMap(new String[] { "1", "2", "3", "4", "5" },
+        new double[] { 1000, 1200, 1400, 1600, 2000 }, new Color[] {
+            new Color(0, 255, 0), new Color(255, 255, 0),
+            new Color(255, 127, 0), new Color(191, 127, 63),
+            new Color(255, 255, 255) }, ColorMapImpl.TYPE_RAMP);
+    RasterSymbolizer rsDem = sb.createRasterSymbolizer(cm, 1.0);
+    Style demStyle = sb.createStyle(rsDem);
+
+    // Put the data into a map:
+
+    return demStyle;
   }
 
   /**
