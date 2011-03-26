@@ -11,7 +11,7 @@
 
 
   <properties>
-    <geotools.version>2.6.4</geotools.version>
+    <geotools.version>2.6.6</geotools.version>
   </properties>
 
   <dependencies>
