@@ -1,11 +1,13 @@
 package net.orxonox.gpr;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.geom.Point2D;
-import java.io.File;
+import java.awt.geom.Point2D.Double;
 import java.io.IOException;
 import java.net.URL;
 
+import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
 import org.geotools.coverage.GridSampleDimension;
@@ -15,9 +17,14 @@ import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.GeoTools;
 import org.geotools.factory.Hints;
 import org.geotools.gce.geotiff.GeoTiffReader;
+import org.geotools.graph.build.basic.BasicDirectedGraphBuilder;
+import org.geotools.graph.structure.basic.BasicDirectedGraph;
+import org.geotools.graph.structure.line.BasicDirectedXYNode;
+import org.geotools.graph.util.delaunay.GraphViewer;
 import org.geotools.map.DefaultMapContext;
 import org.geotools.map.MapContext;
 import org.geotools.referencing.CRS;
+import org.geotools.referencing.GeodeticCalculator;
 import org.geotools.styling.ChannelSelection;
 import org.geotools.styling.ColorMap;
 import org.geotools.styling.ColorMapImpl;
@@ -37,6 +44,9 @@ import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.TransformException;
 import org.opengis.style.ContrastMethod;
+
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.planargraph.Edge;
 
 /**
  * Hello world!
@@ -86,15 +96,29 @@ public class App {
 
   public void start2() {
 
+    // Download data via maven:
+    // \http://code.google.com/p/maven-download-plugin/
     // display a data store file chooser dialog for shapefiles
     // File file = JFileDataStoreChooser.showOpenFile("shp", null);
     URL inputStream = App.class.getClassLoader().getResource("srtm_38_03.tif");
     // Can be downloaded from:
     // http://srtm.csi.cgiar.org/SRT-ZIP/SRTM_V41/SRTM_Data_GeoTiff/srtm_38_03.zip
-    File file = new File(inputStream.getFile());
-    if (!file.exists()) {
-      return;
-    }
+
+    // Multiple raster image can be loaded via ImageMosaicReader.
+    // http://docs.codehaus.org/display/GEOTDOC/Image+Mosaic+Plugin
+    // http://osgeo-org.1803224.n2.nabble.com/mosaicBuilder-td1939281.html#a1939283
+    // unit test:
+    // http://www.javadocexamples.com/java_source/org/geotools/gce/imagemosaic/ImageMosaicReaderTest.java.html
+    // http://docs.geoserver.org/stable/en/user/tutorials/imagepyramid/imagepyramid.html
+    // http://docs.codehaus.org/display/GEOTDOC/Generating+Image+Pyramid+Guide
+    // ImageMosaicReader mosaicReader = null;
+    // try {
+    // mosaicReader = new ImageMosaicReader(inputStream);
+    // // mosaicReader.read(null);
+    // } catch (IOException e1) {
+    // // TODO Auto-generated catch block
+    // e1.printStackTrace();
+    // }
 
     GeoTiffReader reader = null;
     try {
@@ -102,8 +126,8 @@ public class App {
           Hints.FORCE_LONGITUDE_FIRST_AXIS_ORDER, Boolean.TRUE));
     } catch (DataSourceException ex) {
       ex.printStackTrace();
-      // return;
     }
+
     GridCoverage2D coverage = null;
     try {
       coverage = (GridCoverage2D) reader.read(null);
@@ -112,19 +136,59 @@ public class App {
       // return;
     }
 
+    // Use google maps compatible mercator projection EPSG:3785.
+    CoordinateReferenceSystem sphericalMercator = null;
+    try {
+      sphericalMercator = CRS.decode("EPSG:3785");
+    } catch (NoSuchAuthorityCodeException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (FactoryException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    GeodeticCalculator calc = new GeodeticCalculator(sphericalMercator);
+
+    BasicDirectedGraph graph;
+    // create the graph generator
+    BasicDirectedGraphBuilder graphGen = new BasicDirectedGraphBuilder();
+
     // http://maps.google.ch/maps/mm?ie=UTF8&hl=de&ll=46.545284,6.87212&spn=0.096341,0.187969&t=h&z=13
     // http://maps.google.ch/maps/mm?ie=UTF8&hl=de&ll=46.227828,7.897797&spn=0.096903,0.187969&t=h&z=13\
     // reading height values, example.
     Envelope env = coverage.getEnvelope();
     double x = 7.89779; // env.getMedian(0);
     double y = 46.227828;// env.getMedian(1);
+    Double lastPoint = null;
     for (int i = 0; i < 50; i++) {
       double[] dest = new double[3];
       // gridGeometry.toPoint2D(coord), dest
-      Object point = (Object) coverage.evaluate(new Point2D.Double(x, y), dest);
+      Double point = new Point2D.Double(x, y);
+      coverage.evaluate(point, dest);
       System.out.println(y + ", " + x + ", " + dest[0]);
-      x += i * 0.001;
+      x += 0.001;
+      calc.setStartingGeographicPoint(point);
+      if (lastPoint != null) {
+        calc.setDestinationGeographicPoint(lastPoint);
+        double distance = calc.getOrthodromicDistance();
+        System.out.println("Distance: " + distance);
+      }
+      lastPoint = point;
+
+      BasicDirectedXYNode node = new BasicDirectedXYNode();
+      node.setCoordinate(new Coordinate(x * 10000, y * 10000));
+      Edge edge2 = new Edge();
+      graphGen.addNode(node);
     }
+
+    graph = (BasicDirectedGraph) graphGen.getGraph();
+    GraphViewer viewer = new GraphViewer();
+    viewer.setGraph(graph);
+
+    JFrame f = new JFrame("A JFrame");
+    f.setSize(600, 600);
+    f.getContentPane().add(BorderLayout.CENTER, viewer);
+    f.setVisible(true);
 
     // This can be used to render images.
     // coverage.getRenderedImage();
@@ -142,17 +206,6 @@ public class App {
     // JMapFrame.Tool.RESET);
     frame.enableToolBar(true);
 
-    // Use google maps compatible mercator projection EPSG:3785.
-    CoordinateReferenceSystem sphericalMercator = null;
-    try {
-      sphericalMercator = CRS.decode("EPSG:3785");
-    } catch (NoSuchAuthorityCodeException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (FactoryException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
     try {
       map.setCoordinateReferenceSystem(sphericalMercator);
     } catch (TransformException e) {
@@ -168,7 +221,7 @@ public class App {
     map.addLayer(coverage, createColoredStyle());
 
     // Now display the map
-    frame.setVisible(true);
+    // frame.setVisible(true);
   }
 
   private Style createColoredStyle() {

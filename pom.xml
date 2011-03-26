@@ -74,6 +74,19 @@
         <artifactId>gt-image</artifactId>
         <version>${geotools.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-imagemosaic</artifactId>
+        <version>${geotools.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-graph</artifactId>
+        <version>${geotools.version}</version>
+    </dependency>
+
+
+
 
 
   </dependencies>
