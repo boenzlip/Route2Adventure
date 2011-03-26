@@ -33,7 +33,9 @@ import org.geotools.swing.JMapFrame;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.geometry.Envelope;
 import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.operation.TransformException;
 import org.opengis.style.ContrastMethod;
 
 /**
@@ -87,6 +89,8 @@ public class App {
     // display a data store file chooser dialog for shapefiles
     // File file = JFileDataStoreChooser.showOpenFile("shp", null);
     URL inputStream = App.class.getClassLoader().getResource("srtm_38_03.tif");
+    // Can be downloaded from:
+    // http://srtm.csi.cgiar.org/SRT-ZIP/SRTM_V41/SRTM_Data_GeoTiff/srtm_38_03.zip
     File file = new File(inputStream.getFile());
     if (!file.exists()) {
       return;
@@ -110,9 +114,10 @@ public class App {
 
     // http://maps.google.ch/maps/mm?ie=UTF8&hl=de&ll=46.545284,6.87212&spn=0.096341,0.187969&t=h&z=13
     // http://maps.google.ch/maps/mm?ie=UTF8&hl=de&ll=46.227828,7.897797&spn=0.096903,0.187969&t=h&z=13\
+    // reading height values, example.
     Envelope env = coverage.getEnvelope();
-    double x = env.getMedian(0);
-    double y = env.getMedian(1);
+    double x = 7.89779; // env.getMedian(0);
+    double y = 46.227828;// env.getMedian(1);
     for (int i = 0; i < 50; i++) {
       double[] dest = new double[3];
       // gridGeometry.toPoint2D(coord), dest
@@ -137,6 +142,27 @@ public class App {
     // JMapFrame.Tool.RESET);
     frame.enableToolBar(true);
 
+    // Use google maps compatible mercator projection EPSG:3785.
+    CoordinateReferenceSystem sphericalMercator = null;
+    try {
+      sphericalMercator = CRS.decode("EPSG:3785");
+    } catch (NoSuchAuthorityCodeException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (FactoryException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    try {
+      map.setCoordinateReferenceSystem(sphericalMercator);
+    } catch (TransformException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (FactoryException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+
     map.setTitle("ImageLab");
     // map.addLayer(coverage, createGreyscaleStyle(reader));
     map.addLayer(coverage, createColoredStyle());
@@ -148,7 +174,7 @@ public class App {
   private Style createColoredStyle() {
     StyleBuilder sb = new StyleBuilder();
     ColorMap cm = sb.createColorMap(new String[] { "1", "2", "3", "4", "5" },
-        new double[] { 1000, 1200, 1400, 1600, 2000 }, new Color[] {
+        new double[] { 0, 1500, 2500, 3500, 4400 }, new Color[] {
             new Color(0, 255, 0), new Color(255, 255, 0),
             new Color(255, 127, 0), new Color(191, 127, 63),
             new Color(255, 255, 255) }, ColorMapImpl.TYPE_RAMP);
