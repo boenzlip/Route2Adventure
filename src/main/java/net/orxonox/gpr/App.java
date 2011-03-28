@@ -8,9 +8,7 @@ import java.io.IOException;
 import java.net.URL;
 
 import javax.swing.JFrame;
-import javax.swing.JOptionPane;
 
-import org.geotools.coverage.GridSampleDimension;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.data.DataSourceException;
 import org.geotools.factory.CommonFactoryFinder;
@@ -27,17 +25,12 @@ import org.geotools.map.DefaultMapContext;
 import org.geotools.map.MapContext;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.GeodeticCalculator;
-import org.geotools.styling.ChannelSelection;
 import org.geotools.styling.ColorMap;
 import org.geotools.styling.ColorMapImpl;
-import org.geotools.styling.ContrastEnhancement;
 import org.geotools.styling.RasterSymbolizer;
-import org.geotools.styling.SLD;
-import org.geotools.styling.SelectedChannelType;
 import org.geotools.styling.Style;
 import org.geotools.styling.StyleBuilder;
 import org.geotools.styling.StyleFactory;
-import org.geotools.styling.Symbolizer;
 import org.geotools.swing.JMapFrame;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.geometry.Envelope;
@@ -45,7 +38,6 @@ import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.TransformException;
-import org.opengis.style.ContrastMethod;
 
 import com.vividsolutions.jts.geom.Coordinate;
 
@@ -262,143 +254,8 @@ public class App {
     return demStyle;
   }
 
-  /**
-   * Create a Style to display a selected band of the GeoTIFF image as a
-   * greyscale layer
-   * 
-   * @return a new Style instance to render the image in greyscale
-   */
-  private Style createGreyscaleStyle(GeoTiffReader reader) {
-    GridCoverage2D cov = null;
-    try {
-      cov = reader.read(null);
-    } catch (IOException giveUp) {
-      throw new RuntimeException(giveUp);
-    }
-    int numBands = cov.getNumSampleDimensions();
-    Integer[] bandNumbers = new Integer[numBands];
-    for (int i = 0; i < numBands; i++) {
-      bandNumbers[i] = Integer.valueOf(i + 1);
-    }
-    Object selection = JOptionPane.showInputDialog(frame.getComponent(0),
-        "Band to use for greyscale display", "Select an image band",
-        JOptionPane.QUESTION_MESSAGE, null, bandNumbers, Integer.valueOf(1));
-    if (selection != null) {
-      int band = ((Number) selection).intValue();
-      return createGreyscaleStyle(band);
-    }
-    return null;
-  }
-
-  /**
-   * Create a Style to display the specified band of the GeoTIFF image as a
-   * greyscale layer.
-   * <p>
-   * This method is a helper for createGreyScale() and is also called directly
-   * by the displayLayers() method when the application first starts.
-   * 
-   * @param band
-   *          the image band to use for the greyscale display
-   * 
-   * @return a new Style instance to render the image in greyscale
-   */
-  private Style createGreyscaleStyle(int band) {
-    ContrastEnhancement ce = sf.contrastEnhancement(ff.literal(0.8),
-        ContrastMethod.NONE);
-    SelectedChannelType sct = sf.createSelectedChannelType(
-        String.valueOf(band), ce);
-
-    RasterSymbolizer sym = sf.getDefaultRasterSymbolizer();
-    ChannelSelection sel = sf.channelSelection(sct);
-    sym.setChannelSelection(sel);
-
-    Symbolizer[] syms = new Symbolizer[] { sym };
-
-    return SLD.wrapSymbolizers(syms);
-  }
-
-  /**
-   * This method examines the names of the sample dimensions in the provided
-   * coverage looking for "red...", "green..." and "blue..." (case insensitive
-   * match). If these names are not found it uses bands 1, 2, and 3 for the red,
-   * green and blue channels. It then sets up a raster symbolizer and returns
-   * this wrapped in a Style.
-   * 
-   * @return a new Style object containing a raster symbolizer set up for RGB
-   *         image
-   */
-  private Style createRGBStyle(GeoTiffReader reader) {
-    GridCoverage2D cov = null;
-    try {
-      cov = reader.read(null);
-    } catch (IOException giveUp) {
-      throw new RuntimeException(giveUp);
-    }
-    // We need at least three bands to create an RGB style
-    int numBands = cov.getNumSampleDimensions();
-    if (numBands < 3) {
-      return null;
-    }
-    // Get the names of the bands
-    String[] sampleDimensionNames = new String[numBands];
-    for (int i = 0; i < numBands; i++) {
-      GridSampleDimension dim = cov.getSampleDimension(i);
-      sampleDimensionNames[i] = dim.getDescription().toString();
-    }
-    final int RED = 0, GREEN = 1, BLUE = 2;
-    int[] channelNum = { -1, -1, -1 };
-    // We examine the band names looking for "red...", "green...", "blue...".
-    // Note that the channel numbers we record are indexed from 1, not 0.
-    for (int i = 0; i < numBands; i++) {
-      String name = sampleDimensionNames[i].toLowerCase();
-      if (name != null) {
-        if (name.matches("red.*")) {
-          channelNum[RED] = i + 1;
-        } else if (name.matches("green.*")) {
-          channelNum[GREEN] = i + 1;
-        } else if (name.matches("blue.*")) {
-          channelNum[BLUE] = i + 1;
-        }
-      }
-    }
-    // If we didn't find named bands "red...", "green...", "blue..."
-    // we fall back to using the first three bands in order
-    if (channelNum[RED] < 0 || channelNum[GREEN] < 0 || channelNum[BLUE] < 0) {
-      channelNum[RED] = 1;
-      channelNum[GREEN] = 2;
-      channelNum[BLUE] = 3;
-    }
-    // Now we create a RasterSymbolizer using the selected channels
-    SelectedChannelType[] sct = new SelectedChannelType[cov
-        .getNumSampleDimensions()];
-    ContrastEnhancement ce = sf.contrastEnhancement(ff.literal(1.0),
-        ContrastMethod.NORMALIZE);
-    for (int i = 0; i < 3; i++) {
-      sct[i] = sf.createSelectedChannelType(String.valueOf(channelNum[i]), ce);
-    }
-    Symbolizer[] symbolizers = new Symbolizer[0];
-    RasterSymbolizer sym = sf.getDefaultRasterSymbolizer();
-    ChannelSelection sel = sf.channelSelection(sct[RED], sct[GREEN], sct[BLUE]);
-    sym.setChannelSelection(sel);
-    symbolizers[0] = sym;
-
-    return SLD.wrapSymbolizers(symbolizers);
-  }
-
   public static void main(String[] args) {
     System.out.println("Hello GeoTools:" + GeoTools.getVersion());
-
-    // FileDataStore store = null;
-    // FeatureSource featureSource = null;
-    // try {
-    // store = FileDataStoreFinder.getDataStore(file);
-    // featureSource = store.getFeatureSource();
-    // } catch (IOException e) {
-    // // TODO Auto-generated catch block
-    // e.printStackTrace();
-    // }
-
-    // Create a map context and add our shapefile to it
 
     App app = new App();
     app.start();
