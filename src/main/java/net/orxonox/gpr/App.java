@@ -18,9 +18,11 @@ import org.geotools.factory.GeoTools;
 import org.geotools.factory.Hints;
 import org.geotools.gce.geotiff.GeoTiffReader;
 import org.geotools.graph.build.basic.BasicDirectedGraphBuilder;
-import org.geotools.graph.structure.basic.BasicDirectedGraph;
+import org.geotools.graph.structure.Edge;
+import org.geotools.graph.structure.basic.BasicDirectedEdge;
+import org.geotools.graph.structure.basic.BasicGraph;
 import org.geotools.graph.structure.line.BasicDirectedXYNode;
-import org.geotools.graph.util.delaunay.GraphViewer;
+import org.geotools.graph.traverse.standard.DijkstraIterator.EdgeWeighter;
 import org.geotools.map.DefaultMapContext;
 import org.geotools.map.MapContext;
 import org.geotools.referencing.CRS;
@@ -46,7 +48,6 @@ import org.opengis.referencing.operation.TransformException;
 import org.opengis.style.ContrastMethod;
 
 import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.planargraph.Edge;
 
 /**
  * Hello world!
@@ -59,42 +60,6 @@ public class App {
   private JMapFrame frame;
 
   public void start() {
-    URL inputStream = getClass().getClassLoader().getResource("srtm_38_03.tif");
-
-    GeoTiffReader reader = null;
-    try {
-      reader = new GeoTiffReader(inputStream, new Hints(
-          Hints.FORCE_LONGITUDE_FIRST_AXIS_ORDER, Boolean.TRUE));
-    } catch (DataSourceException ex) {
-      ex.printStackTrace();
-      // return;
-    }
-
-    GridCoverage2D coverage = null;
-    try {
-      coverage = (GridCoverage2D) reader.read(null);
-    } catch (IOException ex) {
-      ex.printStackTrace();
-      // return;
-    }
-
-    // Using a GridCoverage2D
-    CoordinateReferenceSystem crs = coverage.getCoordinateReferenceSystem2D();
-    System.out.println("crs: " + crs);
-    int SRID = 0;
-    try {
-      SRID = CRS.lookupEpsgCode(crs, true).intValue();
-    } catch (FactoryException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
-    System.out.println("srid: " + SRID);
-    Envelope env = coverage.getEnvelope();
-    System.out.println("evn: " + env.toString());
-
-  }
-
-  public void start2() {
 
     // Download data via maven:
     // \http://code.google.com/p/maven-download-plugin/
@@ -149,7 +114,7 @@ public class App {
     }
     GeodeticCalculator calc = new GeodeticCalculator(sphericalMercator);
 
-    BasicDirectedGraph graph;
+    BasicGraph graph;
     // create the graph generator
     BasicDirectedGraphBuilder graphGen = new BasicDirectedGraphBuilder();
 
@@ -157,31 +122,65 @@ public class App {
     // http://maps.google.ch/maps/mm?ie=UTF8&hl=de&ll=46.227828,7.897797&spn=0.096903,0.187969&t=h&z=13\
     // reading height values, example.
     Envelope env = coverage.getEnvelope();
-    double x = 7.89779; // env.getMedian(0);
-    double y = 46.227828;// env.getMedian(1);
-    Double lastPoint = null;
-    for (int i = 0; i < 50; i++) {
-      double[] dest = new double[3];
-      // gridGeometry.toPoint2D(coord), dest
-      Double point = new Point2D.Double(x, y);
-      coverage.evaluate(point, dest);
-      System.out.println(y + ", " + x + ", " + dest[0]);
-      x += 0.001;
-      calc.setStartingGeographicPoint(point);
-      if (lastPoint != null) {
-        calc.setDestinationGeographicPoint(lastPoint);
-        double distance = calc.getOrthodromicDistance();
-        System.out.println("Distance: " + distance);
-      }
-      lastPoint = point;
+    double x = env.getMinimum(0);
+    double y = env.getMinimum(1);
 
-      BasicDirectedXYNode node = new BasicDirectedXYNode();
-      node.setCoordinate(new Coordinate(x * 10000, y * 10000));
-      Edge edge2 = new Edge();
-      graphGen.addNode(node);
+    // This calculation is angle constant not distance constant over the globe.
+    final double gridWidth = 0.1; // arc degrees.
+    final int nX = (int) ((env.getMaximum(0) - env.getMinimum(0)) / gridWidth);
+    final int nY = (int) ((env.getMaximum(1) - env.getMinimum(1)) / gridWidth);
+    System.out.println("Array dimensions: " + nX + ", " + nY);
+
+    final int graphScalingFactor = 1;
+
+    // Create the node matrix.
+    BasicDirectedXYNode[][] nodeMatrix = new BasicDirectedXYNode[nX][nY];
+    for (int xOffset = 0; xOffset < nX; xOffset++) {
+      for (int yOffset = 0; yOffset < nY; yOffset++) {
+        BasicDirectedXYNode node = new BasicDirectedXYNode();
+        double currentX = x + xOffset * gridWidth;
+        double currentY = y + yOffset * gridWidth;
+        node.setCoordinate(new Coordinate(currentX * graphScalingFactor,
+            currentY * graphScalingFactor));
+        graphGen.addNode(node);
+
+        nodeMatrix[xOffset][yOffset] = node;
+      }
     }
 
-    graph = (BasicDirectedGraph) graphGen.getGraph();
+    // Create weighted edges. ATTENTION: border edges are not correctly
+    // connected, don't use those for experimenting.
+    for (int xOffset = 1; xOffset < nX - 1; xOffset++) {
+
+      double[] height = new double[1];
+      Double point = new Point2D.Double(x, y);
+      coverage.evaluate(point, height);
+
+      // calc.setStartingGeographicPoint(point);
+      // calc.setDestinationGeographicPoint(lastPoint);
+      // double distance = calc.getOrthodromicDistance();
+
+      for (int yOffset = 1; yOffset < nY - 1; yOffset++) {
+
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
+            xOffset + 1, yOffset));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
+            xOffset, yOffset + 1));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
+            xOffset, yOffset - 1));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
+            xOffset - 1, yOffset));
+      }
+    }
+
+    // create a strategy for weighting edges in the graph
+    EdgeWeighter weighter = new EdgeWeighter() {
+      public double getWeight(Edge e) {
+        return ((EdgeWeight) e.getObject()).getWeight();
+      }
+    };
+
+    graph = (BasicGraph) graphGen.getGraph();
     GraphViewer viewer = new GraphViewer();
     viewer.setGraph(graph);
 
@@ -222,6 +221,30 @@ public class App {
 
     // Now display the map
     // frame.setVisible(true);
+  }
+
+  private BasicDirectedEdge createEdge(GridCoverage2D coverage,
+      BasicDirectedXYNode[][] nodeMatrix, int sourceX, int sourceY, int destX,
+      int destY) {
+    // Add horizontal edge, right.
+    BasicDirectedEdge edge = new BasicDirectedEdge(nodeMatrix[destX][destY],
+        nodeMatrix[sourceX][sourceY]);
+
+    double[] sourceHeight = new double[1];
+    Double sourcePoint = new Point2D.Double(
+        nodeMatrix[sourceX][sourceY].getCoordinate().x,
+        nodeMatrix[sourceX][sourceY].getCoordinate().y);
+    coverage.evaluate(sourcePoint, sourceHeight);
+
+    double[] destHeight = new double[1];
+    Double destPoint = new Point2D.Double(
+        nodeMatrix[destX][destY].getCoordinate().x,
+        nodeMatrix[destX][destY].getCoordinate().y);
+    coverage.evaluate(destPoint, destHeight);
+
+    edge.setObject(new EdgeWeight(destHeight[0] - sourceHeight[0]));
+
+    return edge;
   }
 
   private Style createColoredStyle() {
@@ -378,7 +401,7 @@ public class App {
     // Create a map context and add our shapefile to it
 
     App app = new App();
-    app.start2();
+    app.start();
   }
 
 }
