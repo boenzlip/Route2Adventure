@@ -187,12 +187,13 @@ public class App {
       // TODO Auto-generated catch block
       e1.printStackTrace();
     }
-    server.createContext("/tiles", new TileServer());
+    server.createContext("/tiles", new TileServer(graph, path));
+    server.createContext("/", new WebServer());
     server.setExecutor(null); // creates a default executor
     server.start();
 
-    TileRenderer tr = new TileRenderer();
-    tr.renderTile(0, 1, 0);
+    // TileRenderer tr = new TileRenderer();
+    // tr.renderTile(0, 1, 0);
 
     GraphViewer viewer = new GraphViewer();
     viewer.setGraph(graph);

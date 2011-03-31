@@ -14,13 +14,26 @@ import java.util.Map;
 
 import javax.imageio.ImageIO;
 
+import org.geotools.graph.path.Path;
+import org.geotools.graph.structure.basic.BasicGraph;
+
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 public class TileServer implements HttpHandler {
 
-  private TileRenderer tileRenderer = new TileRenderer();
+  private BasicGraph graph;
+  private Path path;
+
+  public TileServer(BasicGraph graph, Path path) {
+    this.graph = graph;
+    this.path = path;
+
+    this.tileRenderer = new TileRenderer(graph, path);
+  }
+
+  private TileRenderer tileRenderer;
 
   @SuppressWarnings("serial")
   private final class AttributeNotFoundException extends Exception {
@@ -57,10 +70,6 @@ public class TileServer implements HttpHandler {
 
     h.add("Content-Type", "image/png");
     // a PDF (you provide your own!)
-    // File file = new File("image.png");
-    // byte[] bytearray = new byte[(int) file.length()];
-    // FileInputStream fis = new FileInputStream(file);
-    // BufferedInputStream bis = new BufferedInputStream(fis);
 
     BufferedImage image = tileRenderer.renderTile(x, y, zoom);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
