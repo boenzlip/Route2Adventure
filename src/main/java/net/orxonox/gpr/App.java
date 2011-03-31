@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.awt.geom.Point2D.Double;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URL;
 
 import javax.swing.JFrame;
@@ -16,6 +17,8 @@ import org.geotools.factory.GeoTools;
 import org.geotools.factory.Hints;
 import org.geotools.gce.geotiff.GeoTiffReader;
 import org.geotools.graph.build.basic.BasicDirectedGraphBuilder;
+import org.geotools.graph.path.DijkstraShortestPathFinder;
+import org.geotools.graph.path.Path;
 import org.geotools.graph.structure.Edge;
 import org.geotools.graph.structure.basic.BasicDirectedEdge;
 import org.geotools.graph.structure.basic.BasicGraph;
@@ -39,6 +42,7 @@ import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.TransformException;
 
+import com.sun.net.httpserver.HttpServer;
 import com.vividsolutions.jts.geom.Coordinate;
 
 /**
@@ -98,17 +102,15 @@ public class App {
     try {
       sphericalMercator = CRS.decode("EPSG:3785");
     } catch (NoSuchAuthorityCodeException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     } catch (FactoryException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     }
-    GeodeticCalculator calc = new GeodeticCalculator(sphericalMercator);
 
     BasicGraph graph;
     // create the graph generator
     BasicDirectedGraphBuilder graphGen = new BasicDirectedGraphBuilder();
+    GeodeticCalculator calc = new GeodeticCalculator(sphericalMercator);
 
     // http://maps.google.ch/maps/mm?ie=UTF8&hl=de&ll=46.545284,6.87212&spn=0.096341,0.187969&t=h&z=13
     // http://maps.google.ch/maps/mm?ie=UTF8&hl=de&ll=46.227828,7.897797&spn=0.096903,0.187969&t=h&z=13\
@@ -148,20 +150,16 @@ public class App {
       Double point = new Point2D.Double(x, y);
       coverage.evaluate(point, height);
 
-      // calc.setStartingGeographicPoint(point);
-      // calc.setDestinationGeographicPoint(lastPoint);
-      // double distance = calc.getOrthodromicDistance();
-
       for (int yOffset = 1; yOffset < nY - 1; yOffset++) {
 
         graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
-            xOffset + 1, yOffset));
+            xOffset + 1, yOffset, calc));
         graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
-            xOffset, yOffset + 1));
+            xOffset, yOffset + 1, calc));
         graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
-            xOffset, yOffset - 1));
+            xOffset, yOffset - 1, calc));
         graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
-            xOffset - 1, yOffset));
+            xOffset - 1, yOffset, calc));
       }
     }
 
@@ -173,20 +171,40 @@ public class App {
     };
 
     graph = (BasicGraph) graphGen.getGraph();
+
+    DijkstraShortestPathFinder pf = new DijkstraShortestPathFinder(graph,
+        nodeMatrix[3][4], weighter);
+    pf.calculate();
+
+    final Path path = pf
+        .getPath(nodeMatrix[nodeMatrix.length - 2][nodeMatrix[0].length - 2]);
+
+    // Start the tile server.
+    HttpServer server = null;
+    try {
+      server = HttpServer.create(new InetSocketAddress(8080), 0);
+    } catch (IOException e1) {
+      // TODO Auto-generated catch block
+      e1.printStackTrace();
+    }
+    server.createContext("/tiles", new TileServer(graph, path));
+    server.createContext("/", new WebServer());
+    server.setExecutor(null); // creates a default executor
+    server.start();
+    System.out
+        .println("Local webserver started, open url: http://localhost:8080/");
+
+    // TileRenderer tr = new TileRenderer();
+    // tr.renderTile(0, 1, 0);
+
     GraphViewer viewer = new GraphViewer();
     viewer.setGraph(graph);
+    viewer.setPath(path);
 
     JFrame f = new JFrame("A JFrame");
     f.setSize(600, 600);
     f.getContentPane().add(BorderLayout.CENTER, viewer);
     f.setVisible(true);
-
-    // This can be used to render images.
-    // coverage.getRenderedImage();
-
-    // GridGeometry2D geo = coverage.getGridGeometry();
-
-    // Set up a MapContext with the two layers
 
     // Create a JMapFrame with a menu to choose the display style for the
     final MapContext map = new DefaultMapContext();
@@ -212,12 +230,12 @@ public class App {
     map.addLayer(coverage, createColoredStyle());
 
     // Now display the map
-    // frame.setVisible(true);
+    frame.setVisible(true);
   }
 
   private BasicDirectedEdge createEdge(GridCoverage2D coverage,
       BasicDirectedXYNode[][] nodeMatrix, int sourceX, int sourceY, int destX,
-      int destY) {
+      int destY, GeodeticCalculator calc) {
     // Add horizontal edge, right.
     BasicDirectedEdge edge = new BasicDirectedEdge(nodeMatrix[destX][destY],
         nodeMatrix[sourceX][sourceY]);
@@ -234,7 +252,17 @@ public class App {
         nodeMatrix[destX][destY].getCoordinate().y);
     coverage.evaluate(destPoint, destHeight);
 
-    edge.setObject(new EdgeWeight(destHeight[0] - sourceHeight[0]));
+    calc.setStartingGeographicPoint(
+        nodeMatrix[sourceX][sourceY].getCoordinate().x,
+        nodeMatrix[sourceX][sourceY].getCoordinate().y);
+    calc.setDestinationGeographicPoint(
+        nodeMatrix[destX][destY].getCoordinate().x,
+        nodeMatrix[sourceX][sourceY].getCoordinate().y);
+    double distance = calc.getOrthodromicDistance();
+
+    double verticalFactor = 14.0;
+    edge.setObject(new EdgeWeight(Math.abs(destHeight[0] - sourceHeight[0])
+        * verticalFactor + distance));
 
     return edge;
   }

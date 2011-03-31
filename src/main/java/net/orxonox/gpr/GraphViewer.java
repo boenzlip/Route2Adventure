@@ -25,6 +25,7 @@ import java.util.Vector;
 
 import javax.swing.JPanel;
 
+import org.geotools.graph.path.Path;
 import org.geotools.graph.structure.Edge;
 import org.geotools.graph.structure.Graph;
 import org.geotools.graph.structure.line.XYNode;
@@ -41,6 +42,7 @@ import com.vividsolutions.jts.geom.Coordinate;
  */
 public class GraphViewer extends JPanel {
 
+  Path solutionPath;
   Graph graph;
   Collection nodes;
   double minX, minY;
@@ -58,6 +60,10 @@ public class GraphViewer extends JPanel {
 
   /** Creates a new instance of GraphViewer */
   public GraphViewer() {
+  }
+
+  public void setPath(Path path) {
+    this.solutionPath = path;
   }
 
   public void setGraph(Graph gr) {
@@ -94,29 +100,32 @@ public class GraphViewer extends JPanel {
 
     Rectangle viewRect = g.getClipBounds();
 
+    final double DEG2RAD = Math.PI / 180;
+    double miX = (minX + 180) / 360;
+    double miY = (1 - Math.log(Math.tan(minY * DEG2RAD) + 1
+        / Math.cos(minY * DEG2RAD))
+        / Math.PI) / 2;
+    double maX = (maxX + 180) / 360;
+    double maY = (1 - Math.log(Math.tan(maxY * DEG2RAD) + 1
+        / Math.cos(maxY * DEG2RAD))
+        / Math.PI) / 2;
+
+    double mercRatio = Math.abs((maX - miX) / (maY - miY));
+
     int border = 20;
-    xScaling = (int) ((viewRect.width - border) / (maxX - minX));
-    yScaling = (int) ((viewRect.height - border) / (maxY - minY));
+    xScaling = (int) ((viewRect.width - border) / (maxY - minY));
+    yScaling = (int) ((viewRect.height - border) / (maxX - minX));
     xScaling = Math.min(xScaling, yScaling);
     yScaling = xScaling;
+
+    // Scale the y axis to have mercator proportions.
+    xScaling *= mercRatio;
 
     xOffset = (int) -(minX * xScaling) + border / 2;
     yOffset = (int) -(minY * yScaling) + border / 2;
 
     Iterator it = nodes.iterator();
-    while (it.hasNext()) {
-      Object next = it.next();
-      if (!(next instanceof XYNode)) {
-        throw new RuntimeException(
-            "I can't draw a node that doesn't have a coordinate.");
-      }
-      Coordinate coord = ((XYNode) next).getCoordinate();
-      // g.setColor(nodeColors[i]);
-      // i++; //this works if there are no more than 10 nodes.
-      int x = (int) Math.round(xOffset + coord.x * xScaling - 2);
-      int y = (int) Math.round(yOffset + coord.y * yScaling - 2);
-      g.fillOval(x, y, 4, 4);
-    }
+    paintPoints(it, g);
 
     double minWeight = Double.MAX_VALUE;
     double maxWeight = 0;
@@ -152,10 +161,43 @@ public class GraphViewer extends JPanel {
       Coordinate coordA = ((XYNode) next.getNodeA()).getCoordinate();
       Coordinate coordB = ((XYNode) next.getNodeB()).getCoordinate();
 
-      g.drawLine((int) Math.round(xOffset + coordA.x * xScaling),
-          (int) Math.round(yOffset + coordA.y * yScaling),
-          (int) Math.round(xOffset + coordB.x * xScaling),
-          (int) Math.round(yOffset + coordB.y * yScaling));
+      int x1 = (int) Math.round(xOffset + coordA.x * xScaling);
+      int y1 = (int) Math.round(yOffset + coordA.y * yScaling);
+      int x2 = (int) Math.round(xOffset + coordB.x * xScaling);
+      int y2 = (int) Math.round(yOffset + coordB.y * yScaling);
+
+      // lat-tng -> screen coordinate mapping.
+      viewRect = g.getClipBounds();
+      y1 = viewRect.height - y1;
+      y2 = viewRect.height - y2;
+
+      g.drawLine(x1, y1, x2, y2);
+    }
+
+    g.setColor(Color.GREEN);
+    paintPoints(solutionPath.iterator(), g, 7);
+  }
+
+  private void paintPoints(Iterator it, Graphics g) {
+    paintPoints(it, g, 4);
+  }
+
+  private void paintPoints(Iterator it, Graphics g, int size) {
+    while (it.hasNext()) {
+      Object next = it.next();
+      if (!(next instanceof XYNode)) {
+        throw new RuntimeException(
+            "I can't draw a node that doesn't have a coordinate.");
+      }
+      Coordinate coord = ((XYNode) next).getCoordinate();
+      // g.setColor(nodeColors[i]);
+      // i++; //this works if there are no more than 10 nodes.
+      int x = (int) Math.round(xOffset + coord.x * xScaling - size / 2);
+      int y = (int) Math.round(yOffset + coord.y * yScaling + size / 2);
+      Rectangle viewRect = g.getClipBounds();
+      y = viewRect.height - y;
+      g.fillOval(x, y, size, size);
     }
   }
+
 }
