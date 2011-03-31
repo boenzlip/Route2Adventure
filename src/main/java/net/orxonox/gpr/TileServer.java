@@ -1,8 +1,7 @@
 package net.orxonox.gpr;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
@@ -13,11 +12,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.imageio.ImageIO;
+
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 public class TileServer implements HttpHandler {
+
+  private TileRenderer tileRenderer = new TileRenderer();
 
   @SuppressWarnings("serial")
   private final class AttributeNotFoundException extends Exception {
@@ -35,8 +38,13 @@ public class TileServer implements HttpHandler {
 
     // /mt?n=404&v=w2.12&x=130&y=93&zoom=9
 
+    int x = 0;
+    int y = 0;
+    int zoom = 0;
     try {
-      int x = getIntAttribute(t, "x");
+      x = getIntAttribute(t, "x");
+      y = getIntAttribute(t, "y");
+      zoom = getIntAttribute(t, "zoom");
     } catch (AttributeNotFoundException e) {
       e.printStackTrace();
       String response = "Attribute not fun: " + e.toString();
@@ -49,16 +57,21 @@ public class TileServer implements HttpHandler {
 
     h.add("Content-Type", "image/png");
     // a PDF (you provide your own!)
-    File file = new File("image.png");
-    byte[] bytearray = new byte[(int) file.length()];
-    FileInputStream fis = new FileInputStream(file);
-    BufferedInputStream bis = new BufferedInputStream(fis);
-    bis.read(bytearray, 0, bytearray.length);
+    // File file = new File("image.png");
+    // byte[] bytearray = new byte[(int) file.length()];
+    // FileInputStream fis = new FileInputStream(file);
+    // BufferedInputStream bis = new BufferedInputStream(fis);
+
+    BufferedImage image = tileRenderer.renderTile(x, y, zoom);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ImageIO.write(image, "PNG", baos);
+
+    // bis.read(bytearray, 0, bytearray.length);
 
     // ok, we are ready to send the response.
-    t.sendResponseHeaders(200, file.length());
+    t.sendResponseHeaders(200, baos.size());
     OutputStream os = t.getResponseBody();
-    os.write(bytearray, 0, bytearray.length);
+    os.write(baos.toByteArray(), 0, baos.size());
     os.close();
   }
 

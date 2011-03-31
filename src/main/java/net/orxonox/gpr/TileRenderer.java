@@ -6,10 +6,6 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-
-import javax.imageio.ImageIO;
 
 public class TileRenderer {
 
@@ -23,39 +19,33 @@ public class TileRenderer {
   double rightLowerCornerX;
   double rightLowerCornerY;
 
-  public void renderTile(int n, int m, int zoom) {
-    try {
+  public BufferedImage renderTile(int n, int m, int zoom) {
 
-      tileSizeX = 360.0 / Math.pow(2, zoom + 1);
-      tileSizeY = 180.0 / Math.pow(2, zoom + 1);
-      leftUpperCornerX = 360.0 / tileSizeX * n - 180.0;
-      leftUpperCornerY = 90.0 - 180.0 / tileSizeY * m;
-      rightLowerCornerX = leftUpperCornerX + tileSizeX;
-      rightLowerCornerY = leftUpperCornerY + tileSizeY;
+    tileSizeX = 360.0 / Math.pow(2, zoom + 1);
+    tileSizeY = 180.0 / Math.pow(2, zoom + 1);
+    leftUpperCornerX = 360.0 / tileSizeX * n - 180.0;
+    leftUpperCornerY = 90.0 - 180.0 / tileSizeY * m;
+    rightLowerCornerX = leftUpperCornerX + tileSizeX;
+    rightLowerCornerY = leftUpperCornerY + tileSizeY;
 
-      // TYPE_INT_ARGB specifies the image format: 8-bit RGBA packed
-      // into integer pixels
-      BufferedImage bi = new BufferedImage(width, height,
-          BufferedImage.TYPE_INT_ARGB);
+    // TYPE_INT_ARGB specifies the image format: 8-bit RGBA packed
+    // into integer pixels
+    BufferedImage bi = new BufferedImage(width, height,
+        BufferedImage.TYPE_INT_ARGB);
 
-      Graphics2D ig2 = bi.createGraphics();
+    Graphics2D ig2 = bi.createGraphics();
 
-      // Draw debug string.
-      Font font = new Font("Arial", Font.BOLD, 10);
-      ig2.setFont(font);
-      String message = "tile: " + n + ", " + m + " @ z = " + zoom;
-      FontMetrics fontMetrics = ig2.getFontMetrics();
-      int stringWidth = fontMetrics.stringWidth(message);
-      int stringHeight = fontMetrics.getAscent();
-      ig2.setPaint(Color.black);
-      ig2.drawString(message, (width - stringWidth), height - stringHeight);
+    // Draw debug string.
+    Font font = new Font("Arial", Font.BOLD, 10);
+    ig2.setFont(font);
+    String message = "tile: " + n + ", " + m + " @ z = " + zoom;
+    FontMetrics fontMetrics = ig2.getFontMetrics();
+    int stringWidth = fontMetrics.stringWidth(message);
+    int stringHeight = fontMetrics.getAscent();
+    ig2.setPaint(Color.black);
+    ig2.drawString(message, (width - stringWidth), height - stringHeight);
 
-      ImageIO.write(bi, "PNG", new File("image.png"));
-
-    } catch (IOException ie) {
-      ie.printStackTrace();
-    }
-
+    return bi;
   }
 
   private Point latLngToPixel(double latitude, double longitude) {
