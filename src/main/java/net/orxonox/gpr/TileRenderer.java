@@ -28,19 +28,22 @@ public class TileRenderer {
   double rightLowerCornerY;
   private Graph graph;
   private Path path;
+  private double maxLatitude;
 
   public TileRenderer(Graph graph, Path path) {
     this.graph = graph;
     this.path = path;
+
+    this.maxLatitude = 85.05112866411389;
   }
 
   public BufferedImage renderTile(int n, int m, int zoom) {
 
     System.out.println(n + ", " + m + " @ " + zoom);
     tileSizeX = 360.0 / Math.pow(2, zoom);
-    tileSizeY = 180.0 / Math.pow(2, zoom);
+    tileSizeY = 2 * maxLatitude / Math.pow(2, zoom);
     leftUpperCornerX = tileSizeX * n - 180.0;
-    leftUpperCornerY = 90.0 - tileSizeY * m;
+    leftUpperCornerY = maxLatitude - tileSizeY * m;
     rightLowerCornerX = leftUpperCornerX + tileSizeX;
     rightLowerCornerY = leftUpperCornerY - tileSizeY;
 
@@ -58,16 +61,33 @@ public class TileRenderer {
     FontMetrics fontMetrics = ig2.getFontMetrics();
     int stringWidth = fontMetrics.stringWidth(message);
     int stringHeight = fontMetrics.getAscent();
-    ig2.setPaint(Color.black);
+    ig2.setPaint(Color.RED);
     ig2.drawString(message, (width - stringWidth), height - stringHeight);
 
+    ig2.setPaint(Color.BLACK);
     Iterator<XYNode> it = graph.getNodes().iterator();
     paintPoints(it, ig2, 2);
 
     return bi;
   }
 
+  public double[] mercatorProjection(final double aLat, final double aLon) {
+    final double DEG2RAD = Math.PI / 180;
+
+    // I have arrays.
+    double[] p = new double[2];
+    p[0] = (aLon + 180) / 360;
+    p[1] = (1 - Math.log(Math.tan(aLat * DEG2RAD) + 1
+        / Math.cos(aLat * DEG2RAD))
+        / Math.PI) / 2;
+
+    return p;
+  }
+
   private Point latLngToPixel(double latitude, double longitude) {
+
+    double[] a = mercatorProjection(latitude, longitude);
+    System.out.println(a[1] + ", " + a[0]);
 
     double ratioX = width / (rightLowerCornerX - leftUpperCornerX);
     double ratioY = height / (leftUpperCornerY - rightLowerCornerY);
@@ -89,8 +109,32 @@ public class TileRenderer {
       // g.setColor(nodeColors[i]);
       // i++; //this works if there are no more than 10 nodes.
       Point p = latLngToPixel(coord.y, coord.x);
-      g.fillOval(p.x, p.y, pointSize, pointSize);
+      g.fillOval(p.x - pointSize / 2, p.y - pointSize / 2, pointSize, pointSize);
+
     }
+
+    pointSize = 10;
+    g.setColor(Color.BLUE);
+    Point p = latLngToPixel(0.0, 0.0);
+    g.fillOval(p.x - pointSize / 2, p.y - pointSize / 2, pointSize, pointSize);
+
+    p = latLngToPixel(90.0, 0.0);
+    g.setColor(Color.GREEN);
+    g.fillOval(p.x - pointSize / 2, p.y - pointSize / 2, pointSize, pointSize);
+
+    System.out.println("a");
+    p = latLngToPixel(85.0, 0.0);
+    p = latLngToPixel(84.0, 0.0);
+    p = latLngToPixel(80.0, 0.0);
+    p = latLngToPixel(70.0, 0.0);
+    p = latLngToPixel(60.0, 0.0);
+    p = latLngToPixel(50.0, 0.0);
+    p = latLngToPixel(40.0, 0.0);
+    p = latLngToPixel(0.0, 0.0);
+    System.out.println("a");
+    p = latLngToPixel(0.0, 90.0);
+    p = latLngToPixel(0.0, 180.0);
+
   }
   //
   // public void setGraph(Graph gr) {

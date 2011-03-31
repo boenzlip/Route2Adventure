@@ -16,6 +16,26 @@
         map.setCenter(new GLatLng(0.0, 0.0), 1);
         map.setUIToDefault();
         
+        
+        
+        GEvent.addListener(map,"click", function(overlay,latlng) {
+            if (overlay) {
+              // ignore if we click on the info window
+              return;
+            }
+            var tileCoordinate = new GPoint();
+            var tilePoint = new GPoint();
+            var currentProjection = G_NORMAL_MAP.getProjection();
+            tilePoint = currentProjection.fromLatLngToPixel(latlng, map.getZoom());
+            tileCoordinate.x = Math.floor(tilePoint.x / 256);
+            tileCoordinate.y = Math.floor(tilePoint.y / 256);
+            var myHtml = "Latitude: " + latlng.lat() + "<br/>Longitude: " + latlng.lng() + 
+              "<br/>The Tile Coordinate is:<br/> x: " + tileCoordinate.x + 
+              "<br/> y: " + tileCoordinate.y + "<br/> at zoom level " + map.getZoom();	
+            map.openInfoWindow(latlng, myHtml);
+          });
+
+        
         /*
         var copyright = new GCopyright(0,
                 new GLatLngBounds(new GLatLng(-90, -180), 
@@ -63,6 +83,6 @@
 </head>
 
 <body onload="initialize()" onunload="GUnload()">
-<div id="map_canvas" style="width: 500px; height: 300px"></div>
+<div id="map_canvas" style="width: 1024px; height: 768px"></div>
 </body>
 </html>

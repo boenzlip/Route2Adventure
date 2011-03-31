@@ -191,6 +191,8 @@ public class App {
     server.createContext("/", new WebServer());
     server.setExecutor(null); // creates a default executor
     server.start();
+    System.out
+        .println("Local webserver started, open url: http://localhost:8080/");
 
     // TileRenderer tr = new TileRenderer();
     // tr.renderTile(0, 1, 0);
