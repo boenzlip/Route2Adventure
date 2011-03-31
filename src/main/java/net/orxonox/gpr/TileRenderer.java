@@ -6,6 +6,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.util.Iterator;
 
@@ -130,46 +131,15 @@ public class TileRenderer {
             "I can't draw a node that doesn't have a coordinate.");
       }
       g.setColor(color);
+
       Coordinate coord = ((XYNode) next).getCoordinate();
       Point p = latLngToRelativePixel(coord.y, coord.x, tileX, tileY, tileZoom);
-      g.fillOval(p.x - pointSize / 2, p.y - pointSize / 2, pointSize, pointSize);
+      if (new Rectangle(0, 0, tileWidth, tileHeight).contains(p)) {
+        g.fillOval(p.x - pointSize / 2, p.y - pointSize / 2, pointSize,
+            pointSize);
+      }
     }
 
   }
 
-  private Coordinate pixelToLatLng(int x, int y, int zoom) {
-
-    int numberOfTilesPerSide = (int) Math.pow(2, zoom);
-    int totalPixelX = numberOfTilesPerSide * tileWidth;
-    int totalPixelY = numberOfTilesPerSide * tileHeight;
-
-    // Coordinate system middle of the map.
-    double leftUpperCornerX = x * tileWidth - totalPixelX / 2;
-    double leftUpperCornerY = y * tileHeight;
-
-    double rightLowerCornerX = (x + 1) * tileWidth - totalPixelX / 2;
-    double rightLowerCornerY = (y + 1) * tileHeight;
-
-    // Now normalize the numbers to 0..1, where 1 is total length.
-    leftUpperCornerX /= totalPixelX / 2;
-    leftUpperCornerY /= totalPixelY;
-
-    rightLowerCornerX /= totalPixelX / 2;
-    rightLowerCornerY /= totalPixelY;
-
-    double leftUpperCornerLatitude = inverseMercatorProject(leftUpperCornerY);
-    double leftUpperCornerLongitude = leftUpperCornerX * 180.0;
-    double rightLowerCornerLatitude = inverseMercatorProject(rightLowerCornerY);
-    double rightLowerCornerLongitude = rightLowerCornerX * 180.0;
-
-    System.out.println("pixelToLatLng: " + x + ", " + y + ", " + zoom);
-    System.out.println(leftUpperCornerX + ", " + leftUpperCornerY);
-    System.out.println(leftUpperCornerLongitude + ", "
-        + leftUpperCornerLatitude);
-    System.out.println(rightLowerCornerX + ", " + rightLowerCornerY);
-    System.out.println(rightLowerCornerLongitude + ", "
-        + rightLowerCornerLatitude);
-
-    return null;
-  }
 }
