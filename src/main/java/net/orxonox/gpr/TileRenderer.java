@@ -25,7 +25,6 @@ public class TileRenderer {
   double tileSizeY;
   private Graph graph;
   private Path path;
-  private double maxLatitude;
   private int tileX;
   private int tileY;
   private int tileZoom;
@@ -33,10 +32,9 @@ public class TileRenderer {
   public TileRenderer(Graph graph, Path path) {
     this.graph = graph;
     this.path = path;
-
-    this.maxLatitude = 85.05112866411389;
   }
 
+  @SuppressWarnings("unchecked")
   public BufferedImage renderTile(int n, int m, int zoom) {
 
     // System.out.println(n + ", " + m + " @ " + zoom);
@@ -113,11 +111,6 @@ public class TileRenderer {
     return y;
   }
 
-  private double inverseMercatorProject(double mercatorY) {
-    final double n = Math.PI - 2.0 * Math.PI * mercatorY;
-    return 180.0 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
-  }
-
   private void paintPoints(Iterator<XYNode> it, Graphics g, int pointSize) {
     paintPoints(it, g, pointSize, new Color(0.0f, 0.0f, 0.0f, 0.2f));
   }
@@ -135,7 +128,7 @@ public class TileRenderer {
       Coordinate coord = ((XYNode) next).getCoordinate();
       Point p = latLngToRelativePixel(coord.y, coord.x, tileX, tileY, tileZoom);
       if (new Rectangle(0, 0, tileWidth, tileHeight).contains(p)) {
-        g.fillOval(p.x - pointSize / 2, p.y - pointSize / 2, pointSize,
+        g.fillRect(p.x - pointSize / 2, p.y - pointSize / 2, pointSize,
             pointSize);
       }
     }
