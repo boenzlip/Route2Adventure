@@ -111,9 +111,6 @@ public class GraphViewer extends JPanel {
         / Math.PI) / 2;
 
     double mercRatio = Math.abs((maX - miX) / (maY - miY));
-    System.out.println(mercRatio);
-    System.out.println(miX + ", " + miY);
-    System.out.println(maX + ", " + maY);
 
     int border = 20;
     xScaling = (int) ((viewRect.width - border) / (maxY - minY));

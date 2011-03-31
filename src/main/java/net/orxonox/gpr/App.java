@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.awt.geom.Point2D.Double;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URL;
 
 import javax.swing.JFrame;
@@ -41,6 +42,7 @@ import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.TransformException;
 
+import com.sun.net.httpserver.HttpServer;
 import com.vividsolutions.jts.geom.Coordinate;
 
 /**
@@ -177,6 +179,21 @@ public class App {
     final Path path = pf
         .getPath(nodeMatrix[nodeMatrix.length - 2][nodeMatrix[0].length - 2]);
 
+    // Start the tile server.
+    HttpServer server = null;
+    try {
+      server = HttpServer.create(new InetSocketAddress(8080), 0);
+    } catch (IOException e1) {
+      // TODO Auto-generated catch block
+      e1.printStackTrace();
+    }
+    server.createContext("/tiles", new TileServer());
+    server.setExecutor(null); // creates a default executor
+    server.start();
+
+    TileRenderer tr = new TileRenderer();
+    tr.renderTile(0, 1, 0);
+
     GraphViewer viewer = new GraphViewer();
     viewer.setGraph(graph);
     viewer.setPath(path);
@@ -185,9 +202,6 @@ public class App {
     f.setSize(600, 600);
     f.getContentPane().add(BorderLayout.CENTER, viewer);
     f.setVisible(true);
-
-    // This can be used to render images.
-    // coverage.getRenderedImage();
 
     // Create a JMapFrame with a menu to choose the display style for the
     final MapContext map = new DefaultMapContext();
@@ -243,7 +257,7 @@ public class App {
         nodeMatrix[sourceX][sourceY].getCoordinate().y);
     double distance = calc.getOrthodromicDistance();
 
-    double verticalFactor = 100.0;
+    double verticalFactor = 14.0;
     edge.setObject(new EdgeWeight(Math.abs(destHeight[0] - sourceHeight[0])
         * verticalFactor + distance));
 
