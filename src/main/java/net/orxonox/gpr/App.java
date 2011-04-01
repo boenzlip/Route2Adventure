@@ -1,14 +1,11 @@
 package net.orxonox.gpr;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.awt.geom.Point2D.Double;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URL;
-
-import javax.swing.JFrame;
 
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.data.DataSourceException;
@@ -24,8 +21,6 @@ import org.geotools.graph.structure.basic.BasicDirectedEdge;
 import org.geotools.graph.structure.basic.BasicGraph;
 import org.geotools.graph.structure.line.BasicDirectedXYNode;
 import org.geotools.graph.traverse.standard.DijkstraIterator.EdgeWeighter;
-import org.geotools.map.DefaultMapContext;
-import org.geotools.map.MapContext;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.GeodeticCalculator;
 import org.geotools.styling.ColorMap;
@@ -40,7 +35,6 @@ import org.opengis.geometry.Envelope;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.operation.TransformException;
 
 import com.sun.net.httpserver.HttpServer;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -120,7 +114,7 @@ public class App {
     double y = env.getMinimum(1);
 
     // This calculation is angle constant not distance constant over the globe.
-    final double gridWidth = 0.1; // arc degrees.
+    final double gridWidth = 0.01; // arc degrees.
     final int nX = (int) ((env.getMaximum(0) - env.getMinimum(0)) / gridWidth);
     final int nY = (int) ((env.getMaximum(1) - env.getMinimum(1)) / gridWidth);
     System.out.println("Array dimensions: " + nX + ", " + nY);
@@ -197,40 +191,38 @@ public class App {
     // TileRenderer tr = new TileRenderer();
     // tr.renderTile(0, 1, 0);
 
-    GraphViewer viewer = new GraphViewer();
-    viewer.setGraph(graph);
-    viewer.setPath(path);
+    // GraphViewer viewer = new GraphViewer();
+    // viewer.setGraph(graph);
+    // viewer.setPath(path);
 
-    JFrame f = new JFrame("A JFrame");
-    f.setSize(600, 600);
-    f.getContentPane().add(BorderLayout.CENTER, viewer);
-    f.setVisible(true);
+    // JFrame f = new JFrame("A JFrame");
+    // f.setSize(600, 600);
+    // f.getContentPane().add(BorderLayout.CENTER, viewer);
+    // f.setVisible(true);
 
     // Create a JMapFrame with a menu to choose the display style for the
-    final MapContext map = new DefaultMapContext();
-    frame = new JMapFrame(map);
-    frame.setSize(800, 600);
-    frame.enableStatusBar(true);
-    // frame.enableTool(JMapFrame.Tool.ZOOM, JMapFrame.Tool.PAN,
-    // JMapFrame.Tool.RESET);
-    frame.enableToolBar(true);
+    // final MapContext map = new DefaultMapContext();
+    // frame = new JMapFrame(map);
+    // frame.setSize(800, 600);
+    // frame.enableStatusBar(true);
+    // frame.enableToolBar(true);
 
-    try {
-      map.setCoordinateReferenceSystem(sphericalMercator);
-    } catch (TransformException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (FactoryException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+    // try {
+    // map.setCoordinateReferenceSystem(sphericalMercator);
+    // } catch (TransformException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // } catch (FactoryException e) {
+    // // TODO Auto-generated catch block
+    // e.printStackTrace();
+    // }
 
-    map.setTitle("ImageLab");
+    // map.setTitle("ImageLab");
     // map.addLayer(coverage, createGreyscaleStyle(reader));
-    map.addLayer(coverage, createColoredStyle());
+    // map.addLayer(coverage, createColoredStyle());
 
     // Now display the map
-    frame.setVisible(true);
+    // frame.setVisible(true);
   }
 
   private BasicDirectedEdge createEdge(GridCoverage2D coverage,
