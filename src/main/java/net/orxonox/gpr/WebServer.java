@@ -9,9 +9,8 @@ import java.net.URL;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
 
-public class WebServer implements HttpHandler {
+public class WebServer extends AbstractServer {
 
   public void handle(HttpExchange t) throws IOException {
 

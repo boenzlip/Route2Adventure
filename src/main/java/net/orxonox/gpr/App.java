@@ -174,6 +174,7 @@ public class App {
         .getPath(nodeMatrix[nodeMatrix.length - 2][nodeMatrix[0].length - 2]);
 
     // Start the tile server.
+    // Multithreaded server for yet another speed increase!
     HttpServer server = null;
     try {
       server = HttpServer.create(new InetSocketAddress(8080), 0);
