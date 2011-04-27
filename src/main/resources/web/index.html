@@ -3,38 +3,96 @@
 <html xmlns="http://www.w3.org/1999/xhtml"
 	xmlns:v="urn:schemas-microsoft-com:vml">
 <head>
-<meta http-equiv="content-type" content="text/html; charset=utf-8" />
-<title>Google Maps JavaScript API Example: Tile Detector</title>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+  <title>Geographically Parameterized Outdoor Routing</title>
+       <style type="text/css">
+       .context {
+         font-family:Arial, sans-serif;
+         text-decoration:none;
+         color:#4444ff;
+         font-size:small;
+       }
+       a:hover div {
+         background:#eee;
+       }       
+  </style>
+</head>
+
+<body onload="initialize()" onunload="GUnload()">
+
 <script
 	src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAzr2EBOXUKnm_jVnk0OJI7xSosDVG8KKPE1-m51RBrvYughuyMxQ-i1QfUnH94QxWIa6N4U6MouMmBA"
 	type="text/javascript"></script>
 <script type="text/javascript">	
+    var clickedPixel; // Variable for storing clicked pixel location. 
+    var map;
+    var contextmenu;
+    var tileLayerOverlay;
+    
+    var startPoint = new GPoint(90, 0);
+    var destinationPoint = new GPoint(0, 0);
+
     function initialize() {
       if (GBrowserIsCompatible()) {
-      
-        var map = new GMap2(document.getElementById("map_canvas"));
+	  	
+
+    	  
+        // Create map.
+        map = new GMap2(document.getElementById("map_canvas"));
         map.setCenter(new GLatLng(0.0, 0.0), 1);
         map.setUIToDefault();
         
+        var urlTemplate = 'http://localhost:8080/tiles/?x={X}&y={Y}&zoom={Z}';
+        urlTemplate += '&startLat=' + startPoint.y + '&startLng=' + startPoint.x;
+        urlTemplate += '&endLat=' + destinationPoint.y + '&endLng=' + destinationPoint.x; 
+        	
         
+        var tileLayer = new GTileLayer(null, null, null, {
+  		    tileUrlTemplate:urlTemplate, 
+  		    isPng:true,
+  		    opacity:1.0
+  		  });
+        tileLayer.getTileUrl = tileURL;
         
-        GEvent.addListener(map,"click", function(overlay,latlng) {
-            if (overlay) {
-              // ignore if we click on the info window
-              return;
-            }
-            var tileCoordinate = new GPoint();
-            var tilePoint = new GPoint();
-            var currentProjection = G_NORMAL_MAP.getProjection();
-            tilePoint = currentProjection.fromLatLngToPixel(latlng, map.getZoom());
-            tileCoordinate.x = Math.floor(tilePoint.x / 256);
-            tileCoordinate.y = Math.floor(tilePoint.y / 256);
-            var myHtml = "Latitude: " + latlng.lat() + "<br/>Longitude: " + latlng.lng() + 
-              "<br/>The Tile Coordinate is:<br/> x: " + tileCoordinate.x + 
-              "<br/> y: " + tileCoordinate.y + "<br/> at zoom level " + map.getZoom();	
-            map.openInfoWindow(latlng, myHtml);
-          });
+        tileLayerOverlay = new GTileLayerOverlay(tileLayer);
 
+        map.addOverlay(tileLayerOverlay); 
+        
+		// Create the context menu div.
+        contextmenu = document.createElement("div");
+        contextmenu.style.visibility="hidden";
+        contextmenu.style.background="#ffffff";
+        contextmenu.style.border="1px solid #8888FF";
+        contextmenu.innerHTML = '<a href="javascript:zoomIn()"><div class="context">&nbsp;&nbsp;Zoom in&nbsp;&nbsp;<\/div><\/a>'
+                              + '<a href="javascript:zoomOut()"><div class="context">&nbsp;&nbsp;Zoom out&nbsp;&nbsp;<\/div><\/a>'
+                              + '<a href="javascript:fromPosition()"><div class="context">&nbsp;&nbsp;From here&nbsp;&nbsp;<\/div><\/a>'
+                              + '<a href="javascript:toPosition()"><div class="context">&nbsp;&nbsp;To here&nbsp;&nbsp;<\/div><\/a>'
+                              + '<a href="javascript:showPosition()"><div class="context">&nbsp;&nbsp;Show Position&nbsp;&nbsp;<\/div><\/a>';
+        map.getContainer().appendChild(contextmenu);
+
+      
+     	// === listen for singlerightclick ===
+        GEvent.addListener(map, "singlerightclick", function(pixel,tile) {
+          // store the "pixel" info in case we need it later
+          // adjust the context menu location if near an egde
+          // create a GControlPosition
+          // apply it to the context menu, and make the context menu visible
+          clickedPixel = pixel;
+          var x=pixel.x;
+          var y=pixel.y;
+          if (x > map.getSize().width - 120) { x = map.getSize().width - 120 }
+          if (y > map.getSize().height - 100) { y = map.getSize().height - 100 }
+          var pos = new GControlPosition(G_ANCHOR_TOP_LEFT, new GSize(x,y));  
+          pos.apply(contextmenu);
+          contextmenu.style.visibility = "visible";
+        });
+        
+
+
+        // === If the user clicks on the map, close the context menu ===
+        GEvent.addListener(map, "click", function() {
+          contextmenu.style.visibility="hidden";
+        });
         
         /*
         var copyright = new GCopyright(0,
@@ -61,28 +119,78 @@
 
         
         
-        var tileLayerOverlay = new GTileLayerOverlay(
-        		  new GTileLayer(null, null, null, {
-        		    tileUrlTemplate: 'http://localhost:8080/tiles/?x={X}&y={Y}&zoom={Z}', 
-        		    isPng:true,
-        		    opacity:1.0
-        		  })
-        		);
 
-        map.addOverlay(tileLayerOverlay); 
       }
     }
     
-    function CustomGetTileUrl(a,b) {
-    	var f = "http://localhost:8080/tiles/?x=" + a.x + "&y=" + a.y + "&zoom=" + b
-    	return f;
+
+
+
+    // === functions that perform the context menu options ===
+    function zoomIn() {
+      // perform the requested operation
+      map.zoomIn();
+      // hide the context menu now that it has been used
+      contextmenu.style.visibility="hidden";
+    }      
+    function zoomOut() {
+      // perform the requested operation
+      map.zoomOut();
+      // hide the context menu now that it has been used
+      contextmenu.style.visibility="hidden";
+    }      
+    
+    function fromPosition() {
+        var tileCoordinate = new GPoint();
+        var tilePoint = new GPoint();
+        var currentProjection = G_NORMAL_MAP.getProjection();
+        startPoint = map.fromContainerPixelToLatLng(clickedPixel);
+        contextmenu.style.visibility="hidden";
+    }
+    
+    function toPosition() {
+        var tileCoordinate = new GPoint();
+        var tilePoint = new GPoint();
+        var currentProjection = G_NORMAL_MAP.getProjection();
+        destinationPoint = map.fromContainerPixelToLatLng(clickedPixel);
+        contextmenu.style.visibility="hidden";
     }
 
+    function showPosition() {
+      var tileCoordinate = new GPoint();
+      var tilePoint = new GPoint();
+      var currentProjection = G_NORMAL_MAP.getProjection();
+      tilePoint = map.fromContainerPixelToLatLng(clickedPixel)
+      tileCoordinate = clickedPixel;
+      tileCoordinate.x = Math.floor(tilePoint.x / 256);
+      tileCoordinate.y = Math.floor(tilePoint.y / 256);
+      var myHtml = "Latitude: " + tilePoint.y + "<br/>Longitude: " + tilePoint.x + 
+        "<br/>The Tile Coordinate is:<br/> x: " + tileCoordinate.x + 
+        "<br/> y: " + tileCoordinate.y + "<br/> at zoom level " + map.getZoom();	
+        contextmenu.style.visibility="hidden";
+        map.openInfoWindow(tilePoint, myHtml);
+    }
+
+    function tileURL(coord, zoom) {
+        return "http://localhost:8080/tiles/?" +
+        "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + '&startLat=' + startPoint.x + '&startLng=' + startPoint.y +  '&endLat=' + destinationPoint.x + '&endLng=' + destinationPoint.y;
+      }
+
+    function tileURL2(a,b) {
+    	//alert("called");
+    	//return "http://localhost:8080/tiles/?x={X}&y={Y}&zoom={Z}";
+    	//var k = "http://localhost:8080/tiles/?x=" + a.x "&y=" + a.y + "&zoom=" + b;
+        //k += '&startLat=' + startPoint.y + '&startLng=' + startPoint.x;
+        //k += '&endLat=' + destinationPoint.y + '&endLng=' + destinationPoint.x; 
+        //return k;
+
+    }
+    
     
     </script>
-</head>
 
-<body onload="initialize()" onunload="GUnload()">
+
+
 <div id="map_canvas" style="width: 1024px; height: 768px"></div>
 </body>
 </html>

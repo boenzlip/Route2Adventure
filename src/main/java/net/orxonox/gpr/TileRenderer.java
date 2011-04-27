@@ -23,19 +23,16 @@ public class TileRenderer {
 
   double tileSizeX;
   double tileSizeY;
-  private Graph graph;
-  private Path path;
+
   private int tileX;
   private int tileY;
   private int tileZoom;
 
-  public TileRenderer(Graph graph, Path path) {
-    this.graph = graph;
-    this.path = path;
+  public TileRenderer() {
   }
 
   @SuppressWarnings("unchecked")
-  public BufferedImage renderTile(int n, int m, int zoom) {
+  public MapsTile renderTile(Graph graph, Path path, int n, int m, int zoom) {
 
     // System.out.println(n + ", " + m + " @ " + zoom);
 
@@ -65,10 +62,13 @@ public class TileRenderer {
     Iterator<XYNode> it = graph.getNodes().iterator();
     paintPoints(it, ig2, 2);
 
-    it = path.iterator();
-    paintPoints(it, ig2, 10, Color.GREEN);
+    if (path != null) {
+      it = path.iterator();
+      paintPoints(it, ig2, 10, Color.GREEN);
+    }
 
-    return bi;
+    MapsTile tile = new MapsTile(bi);
+    return tile;
   }
 
   /**

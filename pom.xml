@@ -90,6 +90,13 @@
       <artifactId>http</artifactId>
       <version>20070405</version>
     </dependency>
+	<dependency>
+	    <groupId>commons-threadpool</groupId>
+	    <artifactId>commons-threadpool</artifactId>
+	    <version>20030513.073905</version>
+	</dependency>
+
+    
 
 
   </dependencies>
