@@ -1,4 +1,5 @@
-package net.orxonox.gpr;
+package net.orxonox.gpr.graph;
+
 
 /**
  * Minimalistic edge weight.

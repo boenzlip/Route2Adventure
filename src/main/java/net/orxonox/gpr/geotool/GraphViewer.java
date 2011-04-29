@@ -14,7 +14,7 @@
  *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *    Lesser General Public License for more details.
  */
-package net.orxonox.gpr;
+package net.orxonox.gpr.geotool;
 
 import java.awt.Color;
 import java.awt.Graphics;
@@ -24,6 +24,8 @@ import java.util.Iterator;
 import java.util.Vector;
 
 import javax.swing.JPanel;
+
+import net.orxonox.gpr.graph.EdgeWeight;
 
 import org.geotools.graph.path.Path;
 import org.geotools.graph.structure.Edge;

@@ -7,9 +7,9 @@ import java.io.OutputStream;
 
 import javax.imageio.ImageIO;
 
-import net.orxonox.gpr.MapsTile;
-import net.orxonox.gpr.MapsTileRequest;
 import net.orxonox.gpr.TileRenderer;
+import net.orxonox.gpr.data.MapsTile;
+import net.orxonox.gpr.data.MapsTileRequest;
 import net.orxonox.gpr.store.MapTileStore;
 
 import com.sun.net.httpserver.Headers;

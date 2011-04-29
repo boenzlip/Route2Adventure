@@ -6,10 +6,10 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Map;
 
-import net.orxonox.gpr.App;
-import net.orxonox.gpr.EdgeWeight;
-import net.orxonox.gpr.MapsTileRequest;
-import net.orxonox.gpr.MapsTileRouteData;
+import net.orxonox.gpr.GeoRoutingApplication;
+import net.orxonox.gpr.data.MapsTileRequest;
+import net.orxonox.gpr.data.MapsTileRouteData;
+import net.orxonox.gpr.graph.EdgeWeight;
 
 import org.apache.commons.collections.map.LRUMap;
 import org.geotools.coverage.grid.GridCoverage2D;
@@ -104,7 +104,7 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
     // \http://code.google.com/p/maven-download-plugin/
     // display a data store file chooser dialog for shapefiles
     // File file = JFileDataStoreChooser.showOpenFile("shp", null);
-    URL inputStream = App.class.getClassLoader().getResource("srtm_38_03.tif");
+    URL inputStream = GeoRoutingApplication.class.getClassLoader().getResource("srtm_38_03.tif");
     // Can be downloaded from:
     // http://srtm.csi.cgiar.org/SRT-ZIP/SRTM_V41/SRTM_Data_GeoTiff/srtm_38_03.zip
 

@@ -1,4 +1,4 @@
-package net.orxonox.gpr;
+package net.orxonox.gpr.data;
 
 import java.awt.geom.Point2D;
 

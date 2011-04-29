@@ -1,4 +1,4 @@
-package net.orxonox.gpr;
+package net.orxonox.gpr.graph;
 
 public interface IEdgeWeight {
 

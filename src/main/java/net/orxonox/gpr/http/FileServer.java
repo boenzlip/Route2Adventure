@@ -10,7 +10,7 @@ import java.net.URL;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 
-public class IconServer extends AbstractServer {
+public class FileServer extends AbstractServer {
 
   public void handle(HttpExchange t) throws IOException {
 
@@ -24,7 +24,7 @@ public class IconServer extends AbstractServer {
         .substring(t.getRequestURI().getPath().lastIndexOf("/") + 1);
 
     //
-    URL imageUrl = IconServer.class.getClassLoader().getResource(
+    URL imageUrl = FileServer.class.getClassLoader().getResource(
         "web/" + fileName);
     File indexPage = new File(imageUrl.getFile());
 

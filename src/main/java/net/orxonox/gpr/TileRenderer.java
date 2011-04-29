@@ -10,6 +10,8 @@ import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.util.Iterator;
 
+import net.orxonox.gpr.data.MapsTile;
+
 import org.geotools.graph.path.Path;
 import org.geotools.graph.structure.Graph;
 import org.geotools.graph.structure.line.XYNode;

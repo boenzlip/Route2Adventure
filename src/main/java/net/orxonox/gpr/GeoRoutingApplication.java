@@ -7,7 +7,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import net.orxonox.gpr.http.IconServer;
+import net.orxonox.gpr.http.FileServer;
 import net.orxonox.gpr.http.TileServer;
 import net.orxonox.gpr.http.WebServer;
 import net.orxonox.gpr.store.MapTileStore;
@@ -25,7 +25,7 @@ import com.sun.net.httpserver.HttpServer;
  * Hello world!
  * 
  */
-public class App {
+public class GeoRoutingApplication {
 
   final ArrayBlockingQueue<Runnable> httpServerQueue = new ArrayBlockingQueue<Runnable>(
       5);
@@ -49,7 +49,7 @@ public class App {
     server.setExecutor(threadPool);
     server.createContext("/tiles", new TileServer(mapTileStore));
     server.createContext("/", new WebServer());
-    server.createContext("/images", new IconServer());
+    server.createContext("/images", new FileServer());
     server.setExecutor(null); // creates a default executor
     server.start();
     System.out
@@ -110,7 +110,7 @@ public class App {
   public static void main(String[] args) {
     System.out.println("Hello GeoTools:" + GeoTools.getVersion());
 
-    App app = new App();
+    GeoRoutingApplication app = new GeoRoutingApplication();
     app.start();
   }
 

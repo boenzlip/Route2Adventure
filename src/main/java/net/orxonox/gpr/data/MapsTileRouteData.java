@@ -1,4 +1,4 @@
-package net.orxonox.gpr;
+package net.orxonox.gpr.data;
 
 import org.geotools.graph.path.Path;
 import org.geotools.graph.structure.Graph;
