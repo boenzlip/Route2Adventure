@@ -4,12 +4,14 @@ import java.awt.geom.Point2D;
 import java.awt.geom.Point2D.Double;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Map;
 
 import net.orxonox.gpr.App;
 import net.orxonox.gpr.EdgeWeight;
 import net.orxonox.gpr.MapsTileRequest;
 import net.orxonox.gpr.MapsTileRouteData;
 
+import org.apache.commons.collections.map.LRUMap;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.data.DataSourceException;
 import org.geotools.factory.Hints;
@@ -34,17 +36,34 @@ import com.vividsolutions.jts.geom.Coordinate;
 
 public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
 
-  private Path path;
+  // private Path path;
   private BasicGraph graph;
   private BasicDirectedXYNode[][] nodeMatrix;
+  private static final int CACHE_SIZE = 5;
+  private Map<String, MapsTileRouteData> routeCache = new LRUMap(CACHE_SIZE);
 
-  public MapsTileRouteData aquire(MapsTileRequest descriptor) {
-    routeGraph(descriptor.getStartLocation(),
+  public synchronized MapsTileRouteData aquire(MapsTileRequest descriptor) {
+
+    String routeHash = getRouteHash(descriptor.getStartLocation(),
         descriptor.getDestinationLocation());
-    return new MapsTileRouteData(graph, path);
+    MapsTileRouteData routeDate;
+    if (routeCache.containsKey(routeHash)) {
+      routeDate = routeCache.get(routeHash);
+    } else {
+      routeDate = routeGraph(descriptor.getStartLocation(),
+          descriptor.getDestinationLocation());
+      routeCache.put(routeHash, routeDate);
+    }
+
+    return routeDate;
   }
 
-  private void routeGraph(Point2D.Double startLocation,
+  private String getRouteHash(Point2D.Double startLocation,
+      Point2D.Double destinationLocation) {
+    return startLocation.hashCode() + "-" + destinationLocation.hashCode();
+  }
+
+  private MapsTileRouteData routeGraph(Point2D.Double startLocation,
       Point2D.Double destinationLocation) {
 
     // create a strategy for weighting edges in the graph
@@ -57,7 +76,8 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
         getNearestNode(startLocation), weighter);
     pf.calculate();
 
-    path = pf.getPath(getNearestNode(destinationLocation));
+    Path path = pf.getPath(getNearestNode(destinationLocation));
+    return new MapsTileRouteData(graph, path);
   }
 
   private Graphable getNearestNode(Point2D.Double location) {

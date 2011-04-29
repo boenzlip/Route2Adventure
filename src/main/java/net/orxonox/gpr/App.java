@@ -43,7 +43,7 @@ public class App {
       // TODO Auto-generated catch block
       e1.printStackTrace();
     }
-    ThreadPoolExecutor threadPool = new ThreadPoolExecutor(1, 1, 10,
+    ThreadPoolExecutor threadPool = new ThreadPoolExecutor(3, 5, 100,
         TimeUnit.SECONDS, httpServerQueue);
     server.setExecutor(threadPool);
     server.createContext("/tiles", new TileServer(mapTileStore));
