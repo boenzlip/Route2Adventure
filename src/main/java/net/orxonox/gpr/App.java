@@ -7,6 +7,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import net.orxonox.gpr.http.IconServer;
 import net.orxonox.gpr.http.TileServer;
 import net.orxonox.gpr.http.WebServer;
 import net.orxonox.gpr.store.MapTileStore;
@@ -43,11 +44,12 @@ public class App {
       // TODO Auto-generated catch block
       e1.printStackTrace();
     }
-    ThreadPoolExecutor threadPool = new ThreadPoolExecutor(3, 5, 100,
+    ThreadPoolExecutor threadPool = new ThreadPoolExecutor(4, 8, 100,
         TimeUnit.SECONDS, httpServerQueue);
     server.setExecutor(threadPool);
     server.createContext("/tiles", new TileServer(mapTileStore));
     server.createContext("/", new WebServer());
+    server.createContext("/images", new IconServer());
     server.setExecutor(null); // creates a default executor
     server.start();
     System.out

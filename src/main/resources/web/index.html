@@ -37,6 +37,7 @@ var map;
 var lastClickedPoint; // is updated in function setMenuXY(caurrentLatLng)
 var startMarker;
 var stopMarker;
+var routingLayer;
 
 
 function initialize() {
@@ -52,6 +53,22 @@ function initialize() {
 	google.maps.event.addListener(map, "click",function(event){ hideContextMenu(); });
 
 	
+	/* -------- Set Marker ------------ */
+	var initialStartMarkerPosition = new google.maps.LatLng(90, 0);
+	var initialStopMarkerPosition = new google.maps.LatLng(0, 0);
+	startMarker = new google.maps.Marker( { position: initialStartMarkerPosition, 
+		      map: map, 
+		      title:"Start",
+		      icon:"images/start_icon.png"
+	} );
+	startMarker.setVisible(false);
+	stopMarker = new google.maps.Marker( { position: initialStopMarkerPosition, 
+		      map: map, 
+		      title:"Destination",
+		      icon:"images/end_icon.png"
+	} );
+	stopMarker.setVisible(false);
+	
 	/* -------- Overlay ------------ */
 
 	var routingLayerOptions = {
@@ -59,24 +76,8 @@ function initialize() {
 		  tileSize: new google.maps.Size(256, 256),
 		  isPng: true
 	};
-	var routingLayer = new google.maps.ImageMapType(routingLayerOptions);
-	map.overlayMapTypes.insertAt(0, routingLayer);
-
-	
-	/* -------- Set Marker ------------ */
-	var initialStartMarkerPosition = new google.maps.LatLng(90, 0);
-	var initialStopMarkerPosition = new google.maps.LatLng(0, 0);
-	startMarker = new google.maps.Marker( { position: initialStartMarkerPosition, 
-		      map: map, 
-		      title:"Start"
-	} );
-	startMarker.setVisible(false);
-	stopMarker = new google.maps.Marker( { position: initialStopMarkerPosition, 
-		      map: map, 
-		      title:"Destination"
-	} );
-	stopMarker.setVisible(false);
-
+	routingLayer = new google.maps.ImageMapType(routingLayerOptions);
+	//map.overlayMapTypes.insertAt(0, routingLayer);
  }
  
 function getCanvasXY(caurrentLatLng){
@@ -131,16 +132,29 @@ function getCanvasXY(caurrentLatLng){
 	   $('.contextmenu').remove();
    }
    
+   
+   function updateOverlay() {
+	   // Make sure there is a start and stop location.
+	   if(startMarker.getVisible() && stopMarker.getVisible()) {
+		   map.overlayMapTypes.clear();
+		   map.overlayMapTypes.insertAt(0, routingLayer);
+	   }
+   }
+   
    function routeStart() {
 	   hideContextMenu();
 	   startMarker.setPosition(lastClickedPoint);
 	   startMarker.setVisible(true);
+	   
+	   updateOverlay();
    }
    
    function routeEnd() {
 	   hideContextMenu();
 	   stopMarker.setPosition(lastClickedPoint);
 	   stopMarker.setVisible(true);
+	   
+	   updateOverlay();
    }
    
    function tileURL(coord, zoom) {
