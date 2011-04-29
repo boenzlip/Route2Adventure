@@ -1,0 +1,231 @@
+package net.orxonox.gpr.store;
+
+import java.awt.geom.Point2D;
+import java.awt.geom.Point2D.Double;
+import java.io.IOException;
+import java.net.URL;
+
+import net.orxonox.gpr.App;
+import net.orxonox.gpr.EdgeWeight;
+import net.orxonox.gpr.MapsTileRequest;
+import net.orxonox.gpr.MapsTileRouteData;
+
+import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.data.DataSourceException;
+import org.geotools.factory.Hints;
+import org.geotools.gce.geotiff.GeoTiffReader;
+import org.geotools.graph.build.basic.BasicDirectedGraphBuilder;
+import org.geotools.graph.path.DijkstraShortestPathFinder;
+import org.geotools.graph.path.Path;
+import org.geotools.graph.structure.Edge;
+import org.geotools.graph.structure.Graphable;
+import org.geotools.graph.structure.basic.BasicDirectedEdge;
+import org.geotools.graph.structure.basic.BasicGraph;
+import org.geotools.graph.structure.line.BasicDirectedXYNode;
+import org.geotools.graph.traverse.standard.DijkstraIterator.EdgeWeighter;
+import org.geotools.referencing.CRS;
+import org.geotools.referencing.GeodeticCalculator;
+import org.opengis.geometry.Envelope;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.NoSuchAuthorityCodeException;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+
+import com.vividsolutions.jts.geom.Coordinate;
+
+public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
+
+  private Path path;
+  private BasicGraph graph;
+  private BasicDirectedXYNode[][] nodeMatrix;
+
+  public MapsTileRouteData aquire(MapsTileRequest descriptor) {
+    routeGraph(descriptor.getStartLocation(),
+        descriptor.getDestinationLocation());
+    return new MapsTileRouteData(graph, path);
+  }
+
+  private void routeGraph(Point2D.Double startLocation,
+      Point2D.Double destinationLocation) {
+
+    // create a strategy for weighting edges in the graph
+    EdgeWeighter weighter = new EdgeWeighter() {
+      public double getWeight(Edge e) {
+        return ((EdgeWeight) e.getObject()).getWeight();
+      }
+    };
+    DijkstraShortestPathFinder pf = new DijkstraShortestPathFinder(graph,
+        getNearestNode(startLocation), weighter);
+    pf.calculate();
+
+    path = pf.getPath(getNearestNode(destinationLocation));
+  }
+
+  private Graphable getNearestNode(Point2D.Double location) {
+    // TODO greedy closest neighbor lookup can be done much faster.
+    double minDistance = java.lang.Double.MAX_VALUE;
+    Graphable node = null;
+    for (int i = 1; i < nodeMatrix.length - 1; i++) {
+      for (int j = 1; j < nodeMatrix[i].length - 1; j++) {
+        double dx = nodeMatrix[i][j].getCoordinate().x - location.x;
+        double dy = nodeMatrix[i][j].getCoordinate().y - location.y;
+        double distance = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+        if (distance < minDistance) {
+          node = nodeMatrix[i][j];
+          minDistance = distance;
+        }
+      }
+    }
+
+    return node;
+  }
+
+  public void init() {
+    // Download data via maven:
+    // \http://code.google.com/p/maven-download-plugin/
+    // display a data store file chooser dialog for shapefiles
+    // File file = JFileDataStoreChooser.showOpenFile("shp", null);
+    URL inputStream = App.class.getClassLoader().getResource("srtm_38_03.tif");
+    // Can be downloaded from:
+    // http://srtm.csi.cgiar.org/SRT-ZIP/SRTM_V41/SRTM_Data_GeoTiff/srtm_38_03.zip
+
+    // Multiple raster image can be loaded via ImageMosaicReader.
+    // http://docs.codehaus.org/display/GEOTDOC/Image+Mosaic+Plugin
+    // http://osgeo-org.1803224.n2.nabble.com/mosaicBuilder-td1939281.html#a1939283
+    // unit test:
+    // http://www.javadocexamples.com/java_source/org/geotools/gce/imagemosaic/ImageMosaicReaderTest.java.html
+    // http://docs.geoserver.org/stable/en/user/tutorials/imagepyramid/imagepyramid.html
+    // http://docs.codehaus.org/display/GEOTDOC/Generating+Image+Pyramid+Guide
+    // ImageMosaicReader mosaicReader = null;
+    // try {
+    // mosaicReader = new ImageMosaicReader(inputStream);
+    // // mosaicReader.read(null);
+    // } catch (IOException e1) {
+    // // TODO Auto-generated catch block
+    // e1.printStackTrace();
+    // }
+
+    GeoTiffReader reader = null;
+    try {
+      reader = new GeoTiffReader(inputStream, new Hints(
+          Hints.FORCE_LONGITUDE_FIRST_AXIS_ORDER, Boolean.TRUE));
+    } catch (DataSourceException ex) {
+      ex.printStackTrace();
+    }
+
+    GridCoverage2D coverage = null;
+    try {
+      coverage = (GridCoverage2D) reader.read(null);
+    } catch (IOException ex) {
+      ex.printStackTrace();
+      // return;
+    }
+
+    // Use google maps compatible mercator projection EPSG:3785.
+    CoordinateReferenceSystem sphericalMercator = null;
+    try {
+      sphericalMercator = CRS.decode("EPSG:3785");
+    } catch (NoSuchAuthorityCodeException e) {
+      e.printStackTrace();
+    } catch (FactoryException e) {
+      e.printStackTrace();
+    }
+
+    // create the graph generator
+    BasicDirectedGraphBuilder graphGen = new BasicDirectedGraphBuilder();
+    GeodeticCalculator calc = new GeodeticCalculator(sphericalMercator);
+
+    // http://maps.google.ch/maps/mm?ie=UTF8&hl=de&ll=46.545284,6.87212&spn=0.096341,0.187969&t=h&z=13
+    // http://maps.google.ch/maps/mm?ie=UTF8&hl=de&ll=46.227828,7.897797&spn=0.096903,0.187969&t=h&z=13\
+    // reading height values, example.
+    Envelope env = coverage.getEnvelope();
+    double x = env.getMinimum(0);
+    double y = env.getMinimum(1);
+
+    // This calculation is angle constant not distance constant over the globe.
+    final double gridWidth = 0.01; // arc degrees.
+    final int nX = (int) ((env.getMaximum(0) - env.getMinimum(0)) / gridWidth);
+    final int nY = (int) ((env.getMaximum(1) - env.getMinimum(1)) / gridWidth);
+    System.out.println("Array dimensions: " + nX + ", " + nY);
+
+    final int graphScalingFactor = 1;
+
+    // Create the node matrix.
+    nodeMatrix = new BasicDirectedXYNode[nX][nY];
+    for (int xOffset = 0; xOffset < nX; xOffset++) {
+      for (int yOffset = 0; yOffset < nY; yOffset++) {
+        BasicDirectedXYNode node = new BasicDirectedXYNode();
+        double currentX = x + xOffset * gridWidth;
+        double currentY = y + yOffset * gridWidth;
+        node.setCoordinate(new Coordinate(currentX * graphScalingFactor,
+            currentY * graphScalingFactor));
+        graphGen.addNode(node);
+
+        nodeMatrix[xOffset][yOffset] = node;
+      }
+    }
+
+    // Create weighted edges. ATTENTION: border edges are not correctly
+    // connected, don't use those for experimenting.
+    for (int xOffset = 1; xOffset < nX - 1; xOffset++) {
+
+      double[] height = new double[1];
+      Double point = new Point2D.Double(x, y);
+      coverage.evaluate(point, height);
+
+      for (int yOffset = 1; yOffset < nY - 1; yOffset++) {
+
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
+            xOffset + 1, yOffset, calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
+            xOffset, yOffset + 1, calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
+            xOffset, yOffset - 1, calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
+            xOffset - 1, yOffset, calc));
+      }
+    }
+
+    graph = (BasicGraph) graphGen.getGraph();
+
+  }
+
+  public void teardown() {
+    // TODO Auto-generated method stub
+
+  }
+
+  private BasicDirectedEdge createEdge(GridCoverage2D coverage,
+      BasicDirectedXYNode[][] nodeMatrix, int sourceX, int sourceY, int destX,
+      int destY, GeodeticCalculator calc) {
+    // Add horizontal edge, right.
+    BasicDirectedEdge edge = new BasicDirectedEdge(nodeMatrix[destX][destY],
+        nodeMatrix[sourceX][sourceY]);
+
+    double[] sourceHeight = new double[1];
+    Double sourcePoint = new Point2D.Double(
+        nodeMatrix[sourceX][sourceY].getCoordinate().x,
+        nodeMatrix[sourceX][sourceY].getCoordinate().y);
+    coverage.evaluate(sourcePoint, sourceHeight);
+
+    double[] destHeight = new double[1];
+    Double destPoint = new Point2D.Double(
+        nodeMatrix[destX][destY].getCoordinate().x,
+        nodeMatrix[destX][destY].getCoordinate().y);
+    coverage.evaluate(destPoint, destHeight);
+
+    calc.setStartingGeographicPoint(
+        nodeMatrix[sourceX][sourceY].getCoordinate().x,
+        nodeMatrix[sourceX][sourceY].getCoordinate().y);
+    calc.setDestinationGeographicPoint(
+        nodeMatrix[destX][destY].getCoordinate().x,
+        nodeMatrix[sourceX][sourceY].getCoordinate().y);
+    double distance = calc.getOrthodromicDistance();
+
+    double verticalFactor = 13.0;
+    edge.setObject(new EdgeWeight(Math.abs(destHeight[0] - sourceHeight[0])
+        * verticalFactor + distance));
+
+    return edge;
+  }
+
+}

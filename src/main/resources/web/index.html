@@ -34,7 +34,7 @@ body { height: 100%; margin: 15px; padding: 0px }
 var map;
 
 // Start/Stop positions.
-var lastClickedPoint;
+var lastClickedPoint; // is updated in function setMenuXY(caurrentLatLng)
 var startMarker;
 var stopMarker;
 
@@ -99,7 +99,7 @@ function getCanvasXY(caurrentLatLng){
     var menuWidth = $('.contextmenu').width();
     var menuHeight = $('.contextmenu').height();
     var clickedPosition = getCanvasXY(caurrentLatLng);
-    lastClickedPoint = clickedPosition;
+    lastClickedPoint = caurrentLatLng;
     var x = clickedPosition.x ;
     var y = clickedPosition.y ;
 
@@ -118,8 +118,8 @@ function getCanvasXY(caurrentLatLng){
         $('.contextmenu').remove();
             contextmenuDir = document.createElement("div");
           contextmenuDir.className  = 'contextmenu';
-          contextmenuDir.innerHTML = "<a href='javascript:routeStart()' id='menu1'><div class=context>menu item 1<\/div><\/a>" + 
-                                     "<a href='javascript:routeEnd()' id='menu2'><div class=context>menu item 2<\/div><\/a>";
+          contextmenuDir.innerHTML = "<a href='javascript:routeStart()' id='menu1'><div class=context>Route from here<\/div><\/a>" + 
+                                     "<a href='javascript:routeEnd()' id='menu2'><div class=context>Route to here<\/div><\/a>";
         $(map.getDiv()).append(contextmenuDir);
         
         setMenuXY(caurrentLatLng);
@@ -134,11 +134,13 @@ function getCanvasXY(caurrentLatLng){
    function routeStart() {
 	   hideContextMenu();
 	   startMarker.setPosition(lastClickedPoint);
+	   startMarker.setVisible(true);
    }
    
    function routeEnd() {
 	   hideContextMenu();
 	   stopMarker.setPosition(lastClickedPoint);
+	   stopMarker.setVisible(true);
    }
    
    function tileURL(coord, zoom) {
@@ -148,7 +150,9 @@ function getCanvasXY(caurrentLatLng){
 	   // "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + "&client=api";
 
        return "http://localhost:8080/tiles/?" +
-         "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + '&startLat=' + startPoint.lat() + '&startLng=' + startPoint.lng() +  '&endLat=' + destinationPoint.lat() + '&endLng=' + destinationPoint.lng();
+         "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + '&startLat=' + 
+         startPoint.lat() + '&startLng=' + startPoint.lng() +  '&endLat=' + 
+         destinationPoint.lat() + '&endLng=' + destinationPoint.lng();
     }
    
 </script>

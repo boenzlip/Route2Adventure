@@ -26,10 +26,6 @@ import com.sun.net.httpserver.HttpServer;
  */
 public class App {
 
-  // private StyleFactory sf = CommonFactoryFinder.getStyleFactory(null);
-  // private FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2(null);
-  // private JMapFrame frame;
-
   final ArrayBlockingQueue<Runnable> httpServerQueue = new ArrayBlockingQueue<Runnable>(
       5);
 
