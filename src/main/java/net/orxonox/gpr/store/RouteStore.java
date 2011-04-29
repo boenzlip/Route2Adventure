@@ -194,6 +194,7 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
 
       for (int yOffset = 1; yOffset < nY - 1; yOffset++) {
 
+        // grid
         graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
             xOffset + 1, yOffset, calc));
         graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
@@ -202,6 +203,15 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
             xOffset, yOffset - 1, calc));
         graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
             xOffset - 1, yOffset, calc));
+        // diagonals
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
+            xOffset - 1, yOffset - 1, calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
+            xOffset - 1, yOffset + 1, calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
+            xOffset + 1, yOffset + 1, calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
+            xOffset + 1, yOffset + 1, calc));
       }
     }
 
