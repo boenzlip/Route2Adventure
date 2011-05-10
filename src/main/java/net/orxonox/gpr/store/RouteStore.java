@@ -9,6 +9,7 @@ import java.util.Map;
 import net.orxonox.gpr.Route2Adventure;
 import net.orxonox.gpr.data.MapsTileRequest;
 import net.orxonox.gpr.data.MapsTileRouteData;
+import net.orxonox.gpr.graph.BasicDirectedXYZNode;
 import net.orxonox.gpr.graph.EdgeWeight;
 
 import org.apache.commons.collections.map.LRUMap;
@@ -38,7 +39,7 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
 
   // private Path path;
   private BasicGraph graph;
-  private BasicDirectedXYNode[][] nodeMatrix;
+  private BasicDirectedXYZNode[][] nodeMatrix;
   private static final int CACHE_SIZE = 5;
   private Map<String, MapsTileRouteData> routeCache = new LRUMap(CACHE_SIZE);
 
@@ -50,16 +51,14 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
     if (routeCache.containsKey(routeHash)) {
       routeDate = routeCache.get(routeHash);
     } else {
-      routeDate = routeGraph(descriptor.getStartLocation(),
-          descriptor.getDestinationLocation());
+      routeDate = routeGraph(descriptor.getStartLocation(), descriptor.getDestinationLocation());
       routeCache.put(routeHash, routeDate);
     }
 
     return routeDate;
   }
 
-  private String getRouteHash(Point2D.Double startLocation,
-      Point2D.Double destinationLocation) {
+  private String getRouteHash(Point2D.Double startLocation, Point2D.Double destinationLocation) {
     return startLocation.hashCode() + "-" + destinationLocation.hashCode();
   }
 
@@ -68,6 +67,7 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
 
     // create a strategy for weighting edges in the graph
     EdgeWeighter weighter = new EdgeWeighter() {
+
       public double getWeight(Edge e) {
         return ((EdgeWeight) e.getObject()).getWeight();
       }
@@ -126,8 +126,8 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
 
     GeoTiffReader reader = null;
     try {
-      reader = new GeoTiffReader(inputStream, new Hints(
-          Hints.FORCE_LONGITUDE_FIRST_AXIS_ORDER, Boolean.TRUE));
+      reader = new GeoTiffReader(inputStream, new Hints(Hints.FORCE_LONGITUDE_FIRST_AXIS_ORDER,
+          Boolean.TRUE));
     } catch (DataSourceException ex) {
       ex.printStackTrace();
     }
@@ -170,15 +170,21 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
     final int graphScalingFactor = 1;
 
     // Create the node matrix.
-    nodeMatrix = new BasicDirectedXYNode[nX][nY];
+    nodeMatrix = new BasicDirectedXYZNode[nX][nY];
     for (int xOffset = 0; xOffset < nX; xOffset++) {
       for (int yOffset = 0; yOffset < nY; yOffset++) {
-        BasicDirectedXYNode node = new BasicDirectedXYNode();
+        BasicDirectedXYZNode node = new BasicDirectedXYZNode();
         double currentX = x + xOffset * gridWidth;
         double currentY = y + yOffset * gridWidth;
-        node.setCoordinate(new Coordinate(currentX * graphScalingFactor,
-            currentY * graphScalingFactor));
+
+        double latitude = currentX * graphScalingFactor;
+        double longitude = currentY * graphScalingFactor;
+        node.setCoordinate(new Coordinate(latitude, longitude));
         graphGen.addNode(node);
+
+        double[] height = new double[1];
+        coverage.evaluate(new Point2D.Double(latitude, longitude), height);
+        node.setHeight(height[0]);
 
         nodeMatrix[xOffset][yOffset] = node;
       }
@@ -195,23 +201,23 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
       for (int yOffset = 1; yOffset < nY - 1; yOffset++) {
 
         // grid
-        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
-            xOffset + 1, yOffset, calc));
-        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
-            xOffset, yOffset + 1, calc));
-        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
-            xOffset, yOffset - 1, calc));
-        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
-            xOffset - 1, yOffset, calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset, xOffset + 1, yOffset,
+            calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset, xOffset, yOffset + 1,
+            calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset, xOffset, yOffset - 1,
+            calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset, xOffset - 1, yOffset,
+            calc));
         // diagonals
-        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
-            xOffset - 1, yOffset - 1, calc));
-        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
-            xOffset - 1, yOffset + 1, calc));
-        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
-            xOffset + 1, yOffset + 1, calc));
-        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset,
-            xOffset + 1, yOffset + 1, calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset, xOffset - 1,
+            yOffset - 1, calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset, xOffset - 1,
+            yOffset + 1, calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset, xOffset + 1,
+            yOffset + 1, calc));
+        graphGen.addEdge(createEdge(coverage, nodeMatrix, xOffset, yOffset, xOffset + 1,
+            yOffset + 1, calc));
       }
     }
 
@@ -225,35 +231,35 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
   }
 
   private BasicDirectedEdge createEdge(GridCoverage2D coverage,
-      BasicDirectedXYNode[][] nodeMatrix, int sourceX, int sourceY, int destX,
-      int destY, GeodeticCalculator calc) {
+      BasicDirectedXYNode[][] nodeMatrix,
+      int sourceX,
+      int sourceY,
+      int destX,
+      int destY,
+      GeodeticCalculator calc) {
     // Add horizontal edge, right.
     BasicDirectedEdge edge = new BasicDirectedEdge(nodeMatrix[destX][destY],
         nodeMatrix[sourceX][sourceY]);
 
     double[] sourceHeight = new double[1];
-    Double sourcePoint = new Point2D.Double(
-        nodeMatrix[sourceX][sourceY].getCoordinate().x,
+    Double sourcePoint = new Point2D.Double(nodeMatrix[sourceX][sourceY].getCoordinate().x,
         nodeMatrix[sourceX][sourceY].getCoordinate().y);
     coverage.evaluate(sourcePoint, sourceHeight);
 
     double[] destHeight = new double[1];
-    Double destPoint = new Point2D.Double(
-        nodeMatrix[destX][destY].getCoordinate().x,
+    Double destPoint = new Point2D.Double(nodeMatrix[destX][destY].getCoordinate().x,
         nodeMatrix[destX][destY].getCoordinate().y);
     coverage.evaluate(destPoint, destHeight);
 
-    calc.setStartingGeographicPoint(
-        nodeMatrix[sourceX][sourceY].getCoordinate().x,
+    calc.setStartingGeographicPoint(nodeMatrix[sourceX][sourceY].getCoordinate().x,
         nodeMatrix[sourceX][sourceY].getCoordinate().y);
-    calc.setDestinationGeographicPoint(
-        nodeMatrix[destX][destY].getCoordinate().x,
+    calc.setDestinationGeographicPoint(nodeMatrix[destX][destY].getCoordinate().x,
         nodeMatrix[sourceX][sourceY].getCoordinate().y);
     double distance = calc.getOrthodromicDistance();
 
     double verticalFactor = 13.0;
-    edge.setObject(new EdgeWeight(Math.abs(destHeight[0] - sourceHeight[0])
-        * verticalFactor + distance));
+    edge.setObject(new EdgeWeight(Math.abs(destHeight[0] - sourceHeight[0]) * verticalFactor
+        + distance));
 
     return edge;
   }

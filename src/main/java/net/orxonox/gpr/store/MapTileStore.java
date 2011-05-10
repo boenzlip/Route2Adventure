@@ -9,6 +9,10 @@ public class MapTileStore implements IStore<MapsTileRequest, MapsTile> {
 
   private RouteStore routeStore;
   private TileRenderer tileRenderer;
+  
+  public MapTileStore(RouteStore routeStore) {
+    this.routeStore = routeStore;
+  }
 
   public MapsTile aquire(MapsTileRequest descriptor) {
     MapsTile tile = null;
@@ -24,14 +28,10 @@ public class MapTileStore implements IStore<MapsTileRequest, MapsTile> {
   }
 
   public void init() {
-    routeStore = new RouteStore();
-    routeStore.init();
-
     tileRenderer = new TileRenderer();
   }
 
   public void teardown() {
-    routeStore.teardown();
   }
 
 }

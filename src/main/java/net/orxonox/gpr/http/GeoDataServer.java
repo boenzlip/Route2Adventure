@@ -4,23 +4,32 @@ import java.awt.geom.Point2D;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Iterator;
 
 import javax.imageio.ImageIO;
+
+import org.geotools.graph.structure.line.BasicDirectedXYNode;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import net.orxonox.gpr.TileRenderer;
 import net.orxonox.gpr.data.MapsTile;
 import net.orxonox.gpr.data.MapsTileRequest;
+import net.orxonox.gpr.data.MapsTileRouteData;
+import net.orxonox.gpr.graph.BasicDirectedXYZNode;
 import net.orxonox.gpr.store.MapTileStore;
+import net.orxonox.gpr.store.RouteStore;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 
-public class TileServer extends AbstractServer {
+public class GeoDataServer extends AbstractServer {
 
-  private MapTileStore mapTileStore;
+  private RouteStore routeStore;
 
-  public TileServer(MapTileStore mapTileStore) {
-    this.mapTileStore = mapTileStore;
+  public GeoDataServer(RouteStore routeStore) {
+    this.routeStore = routeStore;
   }
 
 
@@ -66,20 +75,35 @@ public class TileServer extends AbstractServer {
       endLng = getDoubleAttribute(t, "endLng");
     } catch (AttributeNotFoundException e) {
     }
-    h.add("Content-Type", "image/png");
+    h.add("Content-Type", "application/json");
 
     MapsTileRequest descriptor = new MapsTileRequest(x, y, zoom,
         new Point2D.Double(startLng, startLat), new Point2D.Double(endLng,
             endLat));
-    MapsTile tile = mapTileStore.aquire(descriptor);
-
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ImageIO.write(tile.getImage(), "PNG", baos);
-
-    // ok, we are ready to send the response.
-    t.sendResponseHeaders(200, baos.size());
+    MapsTileRouteData routeData = routeStore.aquire(descriptor);
+    
+    JSONArray pathPoints = new JSONArray();
+    
+    Iterator<BasicDirectedXYNode> iterator = routeData.getPath().iterator();
+    while(iterator.hasNext()) {
+      BasicDirectedXYZNode node = (BasicDirectedXYZNode)iterator.next();
+      node.getHeight();
+      
+      JSONObject pathPoint = new JSONObject();
+      try {
+        pathPoint.append("x", new Double(node.getCoordinate().x));
+        pathPoint.append("y", new Double(node.getCoordinate().y));
+        pathPoint.append("z", new Double(node.getHeight()));
+      } catch (JSONException e) {
+        e.printStackTrace();
+      }
+      pathPoints.put(pathPoint);
+    }
+    
+    String response = pathPoints.toString();
+    t.sendResponseHeaders(200, response.length());
     OutputStream os = t.getResponseBody();
-    os.write(baos.toByteArray(), 0, baos.size());
+    os.write(response.getBytes());
     os.close();
   }
 
