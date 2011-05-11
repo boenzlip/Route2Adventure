@@ -11,6 +11,7 @@ import net.orxonox.gpr.http.FileServer;
 import net.orxonox.gpr.http.GeoDataServer;
 import net.orxonox.gpr.http.TileServer;
 import net.orxonox.gpr.http.WebServer;
+import net.orxonox.gpr.store.HeightProfileStore;
 import net.orxonox.gpr.store.MapTileStore;
 import net.orxonox.gpr.store.RouteStore;
 
@@ -39,6 +40,9 @@ public class Route2Adventure {
     MapTileStore mapTileStore = new MapTileStore(routeStore);
     mapTileStore.init();
 
+    HeightProfileStore heightProfileStore = new HeightProfileStore();
+    heightProfileStore.init();
+    
     // Start the tile server.
     // Multithreaded server for yet another speed increase!
     HttpServer server = null;
@@ -53,8 +57,8 @@ public class Route2Adventure {
     server.setExecutor(threadPool);
     server.createContext("/", new WebServer());
     server.createContext("/tiles", new TileServer(mapTileStore));
-    server.createContext("/images", new FileServer());
-    server.createContext("/geodata", new GeoDataServer(routeStore));
+    server.createContext("/htdoc", new FileServer());
+    server.createContext("/geodata", new GeoDataServer(routeStore, heightProfileStore));
     server.setExecutor(null); // creates a default executor
     server.start();
     System.out

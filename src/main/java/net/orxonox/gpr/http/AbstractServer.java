@@ -56,6 +56,23 @@ public abstract class AbstractServer implements HttpHandler {
     Double xDouble = Double.valueOf((String) value);
     return xDouble.doubleValue();
   }
+  
+  @SuppressWarnings("unchecked")
+  protected String getStringAttribute(HttpExchange t, String name)
+      throws AttributeNotFoundException {
+
+    Map<String, Object> parameters = (Map<String, Object>) t
+        .getAttribute("parameters");
+    if (parameters == null) {
+      throw new AttributeNotFoundException("Attribute " + name + " not found.");
+    }
+
+    Object value = parameters.get(name);
+    if (!(value instanceof String)) {
+      throw new AttributeNotFoundException("Attribute " + name + " not found.");
+    }
+    return (String)value;
+  }
 
   protected void parseGetParameters(HttpExchange exchange)
       throws UnsupportedEncodingException {

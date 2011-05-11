@@ -26,11 +26,28 @@ body { height: 100%; margin: 15px; padding: 0px }
 .contextmenu div{
     padding-left: 5px
     }
+    
+/* JQUERY PLOT STUFF */      
+.jqplot-cursor-legend {
+  width: 160px;
+  font-family: "Arial, sans-serif";
+  font-size: 0.85em;
+}
+
+td.jqplot-cursor-legend-swatch {
+  width: 1.3em;
+}
+
+div.jqplot-cursor-legend-swatch {
+/*      width: 15px;*/
+}      
 </style>
 
-<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script> 
-<script type="text/javascript" src="http://code.jquery.com/jquery-1.4.2.min.js"></script> 
-<script type="text/javascript">
+<script language="javascript" type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script> 
+<script language="javascript" type="text/javascript" src="/htdoc/js/jquery/jquery-1.4.4.min.js?contentType=text/javascript"></script> 
+<script language="javascript" type="text/javascript" src="/htdoc/js/jquery/jquery.jqplot.js?contentType=text/javascript"></script>
+<script language="javascript" type="text/javascript" src="/htdoc/js/jquery/plugins/jqplot.cursor.js?contentType=text/javascript"></script>
+<script language="javascript" type="text/javascript">
 var map;
 
 // Start/Stop positions.
@@ -38,6 +55,7 @@ var lastClickedPoint; // is updated in function setMenuXY(caurrentLatLng)
 var startMarker;
 var stopMarker;
 var routingLayer;
+var heightMapPlot;
 
 
 function initialize() {
@@ -59,13 +77,13 @@ function initialize() {
 	startMarker = new google.maps.Marker( { position: initialStartMarkerPosition, 
 		      map: map, 
 		      title:"Start",
-		      icon:"images/start_icon.png"
+		      icon:"htdoc/start_icon.png"
 	} );
 	startMarker.setVisible(false);
 	stopMarker = new google.maps.Marker( { position: initialStopMarkerPosition, 
 		      map: map, 
 		      title:"Destination",
-		      icon:"images/end_icon.png"
+		      icon:"htdoc/end_icon.png"
 	} );
 	stopMarker.setVisible(false);
 	
@@ -79,6 +97,10 @@ function initialize() {
 	};
 	routingLayer = new google.maps.ImageMapType(routingLayerOptions);
 	//map.overlayMapTypes.insertAt(0, routingLayer);
+	
+	/* -------- JQuery Plot ------------ */
+	$.jqplot.config.enablePlugins = true;           	                  
+  
  }
  
 function getCanvasXY(caurrentLatLng){
@@ -139,6 +161,35 @@ function getCanvasXY(caurrentLatLng){
 	   if(startMarker.getVisible() && stopMarker.getVisible()) {
 		   map.overlayMapTypes.clear();
 		   map.overlayMapTypes.insertAt(0, routingLayer);
+
+		   // Update data also.
+       dataUrl = geoDataURL(new google.maps.Point(0.0, 0.0), 0);
+		   $.getJSON(dataUrl, function(data) {
+		     
+		     // Full jpolt options: http://www.jqplot.com/docs/files/jqPlotOptions-txt.html#jqPlot_Options
+		     heightMapPlot = $.jqplot('chart1', [data], {
+		       seriesDefaults:{neighborThreshold:0, showMarker: false},
+		       series:[
+		         {label:'walk'}
+		        
+		       ],
+		       cursor:{
+		         showVerticalLine:true,
+		         showTooltip: true,
+		         followMouse: true,
+		         showTooltipDataPosition:true,
+		         zoom:true,
+		         intersectionThreshold:6,
+		         tooltipFormatString: '%s %s km @ %s m'
+		       },
+		       legend:{
+		         location:'nw',
+		         xoffset: 310,
+		         yoffset: 100
+		       },
+		       axesDefaults:{tickOptions:{formatString:"%i"}, autoscale:false, useSeriesColor:true}  
+		     }).replot();
+		   }); 
 	   }
    }
    
@@ -158,212 +209,33 @@ function getCanvasXY(caurrentLatLng){
 	   updateOverlay();
    }
    
+   
+   function geoDataURL(coord, zoom) {
+     return "http://localhost:8080/geodata/?" + urlArguments(coord, zoom);
+    }
+   
    function tileURL(coord, zoom) {
-	   var startPoint = startMarker.getPosition();
-	   var destinationPoint = stopMarker.getPosition();
-	   //return "http://mt3.google.com/mapstt?" +
-	   // "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + "&client=api";
+     return "http://localhost:8080/tiles/?" + urlArguments(coord, zoom);
+    }
+   
+   function urlArguments(coord, zoom) {
+     var startPoint = startMarker.getPosition();
+     var destinationPoint = stopMarker.getPosition();
+     //return "http://mt3.google.com/mapstt?" +
+     // "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + "&client=api";
 
-       return "http://localhost:8080/tiles/?" +
-         "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + '&startLat=' + 
+       return "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + '&startLat=' + 
          startPoint.lat() + '&startLng=' + startPoint.lng() +  '&endLat=' + 
          destinationPoint.lat() + '&endLng=' + destinationPoint.lng();
-    }
+   }
    
 </script>
 
 </head>
 <body onload="initialize()">
   <div id="map_canvas" style="width:100%; height:100%"></div>
+  <div class="jqPlot" id="chart1" style="height:320px; width:100%;"></div>
 </body>
 </html>
 
 
-
-
-
-
-<!-- 
-
-
-<body onload="initialize()" onunload="GUnload()">
-
- <script
-	src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAAzr2EBOXUKnm_jVnk0OJI7xSosDVG8KKPE1-m51RBrvYughuyMxQ-i1QfUnH94QxWIa6N4U6MouMmBA"
-	type="text/javascript"></script>
-
-<script type="text/javascript">	
-    var clickedPixel; // Variable for storing clicked pixel location. 
-    var map;
-    var contextmenu;
-    var tileLayerOverlay;
-    
-    var startPoint = new GPoint(90, 0);
-    var destinationPoint = new GPoint(0, 0);
-
-    function initialize() {
-      if (GBrowserIsCompatible()) {
-	  	
-
-    	  
-        map = new GMap2(document.getElementById("map_canvas"));
-        map.setCenter(new GLatLng(46.785, 7.344), 7);
-        map.setUIToDefault();
-        
-
-
-
-        
-        
-        var urlTemplate = 'http://localhost:8080/tiles/?x={X}&y={Y}&zoom={Z}';
-        urlTemplate += '&startLat=' + startPoint.y + '&startLng=' + startPoint.x;
-        urlTemplate += '&endLat=' + destinationPoint.y + '&endLng=' + destinationPoint.x; 
-        	
-        
-        var tileLayer = new GTileLayer(null, null, null, {
-  		    tileUrlTemplate:urlTemplate, 
-  		    isPng:true,
-  		    opacity:1.0
-  		  });
-        tileLayer.getTileUrl = tileURL;
-        
-        tileLayerOverlay = new GTileLayerOverlay(tileLayer);
-
-        map.addOverlay(tileLayerOverlay); 
-        
-		// Create the context menu div.
-        contextmenu = document.createElement("div");
-        contextmenu.style.visibility="hidden";
-        contextmenu.style.background="#ffffff";
-        contextmenu.style.border="1px solid #8888FF";
-        contextmenu.innerHTML = '<a href="javascript:zoomIn()"><div class="context">&nbsp;&nbsp;Zoom in&nbsp;&nbsp;<\/div><\/a>'
-                              + '<a href="javascript:zoomOut()"><div class="context">&nbsp;&nbsp;Zoom out&nbsp;&nbsp;<\/div><\/a>'
-                              + '<a href="javascript:fromPosition()"><div class="context">&nbsp;&nbsp;From here&nbsp;&nbsp;<\/div><\/a>'
-                              + '<a href="javascript:toPosition()"><div class="context">&nbsp;&nbsp;To here&nbsp;&nbsp;<\/div><\/a>'
-                              + '<a href="javascript:showPosition()"><div class="context">&nbsp;&nbsp;Show Position&nbsp;&nbsp;<\/div><\/a>';
-        map.getContainer().appendChild(contextmenu);
-
-      
-     	// === listen for singlerightclick ===
-        GEvent.addListener(map, "singlerightclick", function(pixel,tile) {
-          // store the "pixel" info in case we need it later
-          // adjust the context menu location if near an egde
-          // create a GControlPosition
-          // apply it to the context menu, and make the context menu visible
-          clickedPixel = pixel;
-          var x=pixel.x;
-          var y=pixel.y;
-          if (x > map.getSize().width - 120) { x = map.getSize().width - 120 }
-          if (y > map.getSize().height - 100) { y = map.getSize().height - 100 }
-          var pos = new google.maps.GControlPosition(G_ANCHOR_TOP_LEFT, new GSize(x,y));  
-          pos.apply(contextmenu);
-          contextmenu.style.visibility = "visible";
-        });
-        
-
-
-        // === If the user clicks on the map, close the context menu ===
-        GEvent.addListener(map, "click", function() {
-          contextmenu.style.visibility="hidden";
-        });
-        
-        /*
-        var copyright = new GCopyright(0,
-                new GLatLngBounds(new GLatLng(-90, -180), 
-                                  new GLatLng(90, 180)),
-                0,
-                "geo-param-router");
-        var copyrightCollection = new GCopyrightCollection('Chart');
-        copyrightCollection.addCopyright(copyright);
-        
-        var tilelayers = [new GTileLayer(copyCollection, 3, 11)];
-        tilelayers[0].getTileUrl = CustomGetTileUrl;
-
-        function CustomGetTileUrl(a,b) {
-        	var z = 17 - b;
-        	var f = "/maps/?x="+a.x+"&y="+a.y+"&zoom="+z;
-        	return f;
-        }
-
-        var custommap = new GMapType(tilelayers, new GMercatorProjection(12), "Chart", {errorMessage:"No chart data available"});
-        map.addMapType(custommap);
-        */
-
-
-        
-        
-
-      }
-    }
-    
-
-
-
-    // === functions that perform the context menu options ===
-    function zoomIn() {
-      // perform the requested operation
-      map.zoomIn();
-      // hide the context menu now that it has been used
-      contextmenu.style.visibility="hidden";
-    }      
-    function zoomOut() {
-      // perform the requested operation
-      map.zoomOut();
-      // hide the context menu now that it has been used
-      contextmenu.style.visibility="hidden";
-    }      
-    
-    function fromPosition() {
-        var tileCoordinate = new GPoint();
-        var tilePoint = new GPoint();
-        var currentProjection = G_NORMAL_MAP.getProjection();
-        startPoint = map.fromContainerPixelToLatLng(clickedPixel);
-        contextmenu.style.visibility="hidden";
-    }
-    
-    function toPosition() {
-        var tileCoordinate = new GPoint();
-        var tilePoint = new GPoint();
-        var currentProjection = G_NORMAL_MAP.getProjection();
-        destinationPoint = map.fromContainerPixelToLatLng(clickedPixel);
-        contextmenu.style.visibility="hidden";
-    }
-
-    function showPosition() {
-      var tileCoordinate = new GPoint();
-      var tilePoint = new GPoint();
-      var currentProjection = G_NORMAL_MAP.getProjection();
-      tilePoint = map.fromContainerPixelToLatLng(clickedPixel)
-      tileCoordinate = clickedPixel;
-      tileCoordinate.x = Math.floor(tilePoint.x / 256);
-      tileCoordinate.y = Math.floor(tilePoint.y / 256);
-      var myHtml = "Latitude: " + tilePoint.y + "<br/>Longitude: " + tilePoint.x + 
-        "<br/>The Tile Coordinate is:<br/> x: " + tileCoordinate.x + 
-        "<br/> y: " + tileCoordinate.y + "<br/> at zoom level " + map.getZoom();	
-        contextmenu.style.visibility="hidden";
-        map.openInfoWindow(tilePoint, myHtml);
-    }
-
-    function tileURL(coord, zoom) {
-        return "http://localhost:8080/tiles/?" +
-        "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + '&startLat=' + startPoint.x + '&startLng=' + startPoint.y +  '&endLat=' + destinationPoint.x + '&endLng=' + destinationPoint.y;
-      }
-
-    function tileURL2(a,b) {
-    	//alert("called");
-    	//return "http://localhost:8080/tiles/?x={X}&y={Y}&zoom={Z}";
-    	//var k = "http://localhost:8080/tiles/?x=" + a.x "&y=" + a.y + "&zoom=" + b;
-        //k += '&startLat=' + startPoint.y + '&startLng=' + startPoint.x;
-        //k += '&endLat=' + destinationPoint.y + '&endLng=' + destinationPoint.x; 
-        //return k;
-
-    }
-    
-    
-    </script>
-
-
-
-<div id="map_canvas" style="width: 1024px; height: 768px"></div>
-</body>
-</html> -->
