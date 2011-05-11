@@ -5,7 +5,11 @@
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 
 <style type="text/css">
-html { height: 100% }
+html { 
+    height: 100%;
+    font-family:Arial, sans-serif;
+    font-size:small;
+}
 body { height: 100%; margin: 15px; padding: 0px } 
 #map_canvas{
     width: 100%; 
@@ -47,6 +51,9 @@ div.jqplot-cursor-legend-swatch {
 <script language="javascript" type="text/javascript" src="/htdoc/js/jquery/jquery-1.4.4.min.js?contentType=text/javascript"></script> 
 <script language="javascript" type="text/javascript" src="/htdoc/js/jquery/jquery.jqplot.js?contentType=text/javascript"></script>
 <script language="javascript" type="text/javascript" src="/htdoc/js/jquery/plugins/jqplot.cursor.js?contentType=text/javascript"></script>
+<script language="javascript" type="text/javascript" src="/htdoc/js/jquery/plugins/jqplot.canvasTextRenderer.min.js?contentType=text/javascript"></script>
+<script language="javascript" type="text/javascript" src="/htdoc/js/jquery/plugins/jqplot.canvasAxisLabelRenderer.min.js?contentType=text/javascript"></script>
+
 <script language="javascript" type="text/javascript">
 var map;
 
@@ -166,6 +173,8 @@ function getCanvasXY(caurrentLatLng){
        dataUrl = geoDataURL(new google.maps.Point(0.0, 0.0), 0);
 		   $.getJSON(dataUrl, function(data) {
 		     
+		     $.jqplot.eventListenerHooks.push(['jqplotMouseMove', myMove]);
+		     
 		     // Full jpolt options: http://www.jqplot.com/docs/files/jqPlotOptions-txt.html#jqPlot_Options
 		     heightMapPlot = $.jqplot('chart1', [data], {
 		       seriesDefaults:{neighborThreshold:0, showMarker: false},
@@ -178,8 +187,8 @@ function getCanvasXY(caurrentLatLng){
 		         showTooltip: true,
 		         followMouse: true,
 		         showTooltipDataPosition:true,
-		         zoom:true,
-		         intersectionThreshold:6,
+		         zoom:false,
+		         intersectionThreshold: Math.round($('#chart1').width() / data.length),
 		         tooltipFormatString: '%s %s km @ %s m'
 		       },
 		       legend:{
@@ -187,11 +196,44 @@ function getCanvasXY(caurrentLatLng){
 		         xoffset: 310,
 		         yoffset: 100
 		       },
-		       axesDefaults:{tickOptions:{formatString:"%i"}, autoscale:false, useSeriesColor:true}  
+		       axes:{
+		         yaxis: {
+		           label: 'Height',
+		           autoscale: false,
+               labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+
+		         },
+		         xaxis: {
+		           label: 'Distance',
+		           autoscale: false,
+		           tickInterval: Math.max(1, Math.round(data.length / 50)) ,
+		           pad: 0.0,
+		           padMin: 0.0,
+		           padMax: 0.0,
+		           labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+
+		         }
+		       },
+		       axesDefaults:{tickOptions:{formatString:"%i"}, autoscale:true, useSeriesColor:true}  
 		     }).replot();
+		     
+
+		    
+    		// Here is how you attach the custom callback to the mouse move event on the plot.
+    		
+    		$('chart1').append('<div id="myToolTip" style="position:absolute;display:none;background:#E5DACA;padding:4px;"></div>');
+
+
+		     
+		     //heightMapPlot.preDrawLegendHooks = graphHook;
 		   }); 
 	   }
    }
+   
+   function myMove (ev, gridpos, datapos, neighbor, plot) {
+     //alert(gridpos.x + " - " + gridpos.y + " data: " + datapos.x + " - " + datapos.y + " - " + plot);
+    }
+   
    
    function routeStart() {
 	   hideContextMenu();
