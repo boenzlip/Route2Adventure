@@ -3,6 +3,86 @@ Geographically Parameterized Outdoor Routing
 ============================================
 
 
+Simple Project Plan:
+
+Milestones:
+
+0.X: Get Routing
+================
+0.1 get routing to work on google maps as a proof of concept
+0.2 tune routing quality - get usable/reasonable results
+0.3 add multipoint routing - multiple points on a path
+0.4 data coverage - cover whole Switzerland or even whole Alps
+0.4 tune application usability - user interface, speed, design
+0.5 some field tests - create routes and test
+1.0 release (<= July 11)
+
+
+1.X: Hiking Organizer
+=====================  
+1.1 create height profile visualizer, proof of concept
+1.2 create a hiking organizer, proof of concept - organize long trips in daily stages
+1.3 tune application usability - user interface, speed, design
+2.0 release (-> ?)
+
+
+Y.X: Routing Frenzy
+===================
+- add color mapping on maps for simpler visual routing
+- different routing characteristics (fast/slow hiker, favor hights/valleys, daytime attribues (shadow, sun), etc)
+- add untraversable regions like lakes/sea steep regions or very high mountains
+- make manual routing adjustments even easier
+- possibility of routing from location-name to location-name (instead of lat/lng points), eg. Bern -> Sion
+- fast routing entry via url: <url>/bern/sion
+
+
+Y.X: Social Integration
+=======================
+- links to routes
+- saveable routes
+- searching routes (or "did you mean ...." style)
+- comments on routes
+- rating for routes
+- easy widget integration into any page
+- integration into facebook
+- integration into hijker.org
+- integration into X
+
+
+Y.X Ads
+=======
+- analyze different possibilities for adding Ads, e.g. google ads?
+- google maps layer for showing restaurants, SAC, hotels, etc on the route
+
+
+Y.X Scaling Up
+==============
+- add support for the whole world
+
+
+
+
+
+Current Tasks (ordered by priority)
+===================================
+- high scalability routing
+- mutipoint routing
+- create user interface concept
+- load multiple data sources and merge data for Switzerland country coverage
+- find out how to best visualize the routes (overlay vs. polygon)
+- tune application for speed
+- tune user interface
+- user interface: add feedback button
+
+
+
+
+
+
+
+Routing Problem
+===============
+
 Idea:
 Find the optimal way to walk through your favorite outdoor region.
 Where optimal is defined by:
