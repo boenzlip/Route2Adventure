@@ -10,6 +10,8 @@ import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.util.Iterator;
 
+import net.orxonox.gpr.data.MapsTile;
+
 import org.geotools.graph.path.Path;
 import org.geotools.graph.structure.Graph;
 import org.geotools.graph.structure.line.XYNode;
@@ -23,19 +25,17 @@ public class TileRenderer {
 
   double tileSizeX;
   double tileSizeY;
-  private Graph graph;
-  private Path path;
+
+  // TODO these local variables are bad for concurrency -> no local state!
   private int tileX;
   private int tileY;
   private int tileZoom;
 
-  public TileRenderer(Graph graph, Path path) {
-    this.graph = graph;
-    this.path = path;
+  public TileRenderer() {
   }
 
   @SuppressWarnings("unchecked")
-  public BufferedImage renderTile(int n, int m, int zoom) {
+  public MapsTile renderTile(Graph graph, Path path, int n, int m, int zoom) {
 
     // System.out.println(n + ", " + m + " @ " + zoom);
 
@@ -61,14 +61,43 @@ public class TileRenderer {
     ig2.drawString(message, (tileWidth - stringWidth), tileHeight
         - stringHeight);
 
-    ig2.setPaint(Color.BLACK);
-    Iterator<XYNode> it = graph.getNodes().iterator();
-    paintPoints(it, ig2, 2);
+    // ig2.setPaint(Color.BLACK);
+    // Iterator<XYNode> it = graph.getNodes().iterator();
+    // paintPoints(it, ig2, 2);
 
-    it = path.iterator();
-    paintPoints(it, ig2, 10, Color.GREEN);
+    int pointSize = 0;
+    switch (zoom) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+      pointSize = 2;
+      break;
+    case 6:
+    case 7:
+    case 8:
+      pointSize = 4;
+      break;
+    case 9:
+      pointSize = 6;
+      break;
+    case 10:
+      pointSize = 8;
+      break;
+    case 11:
+    default:
+      pointSize = 10;
 
-    return bi;
+    }
+    if (path != null) {
+      Iterator<XYNode> it = path.iterator();
+      paintPoints(it, ig2, pointSize, Color.GREEN);
+    }
+
+    MapsTile tile = new MapsTile(bi);
+    return tile;
   }
 
   /**
@@ -112,7 +141,7 @@ public class TileRenderer {
   }
 
   private void paintPoints(Iterator<XYNode> it, Graphics g, int pointSize) {
-    paintPoints(it, g, pointSize, new Color(0.0f, 0.0f, 0.0f, 0.2f));
+    paintPoints(it, g, pointSize, new Color(0.0f, 0.0f, 0.0f, 0.5f));
   }
 
   private void paintPoints(Iterator<XYNode> it, Graphics g, int pointSize,

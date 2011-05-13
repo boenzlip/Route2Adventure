@@ -17,3 +17,70 @@ Where optimal is defined by:
 Additional Feature Ideas:
 - draw a hight profile of the selected route
 - suggest daily walking fragmentation of the walking path
+
+
+
+
+Routing Features:
+routing over a height map can be approximated by creating walking grid over the map. this grid is 
+regularly spaced and rectangular. if the grid is chosen with small node distance (therefore height
+resolution) the error induced by walking on a rectangular grid can be made very small.
+however high resolution will also introduce a lot of problems:
+- limited grid memory capacity
+- slow routing speed
+- limited routing memory capacity
+by aiming for high grid resolution (high routing accuracy) - which we do - it's not realistic to be 
+able to solve a routing problem in real-time. for testing purposes we should be able to do real-time
+routing.
+
+
+this is an example of a greedy and simple approach:
+therefore a pre-processing step will be required in order to pre-create all routes possible and store 
+the routing results into a suited data base. on a user request in real-time what has to be done is only
+to load the data and display it. 
+
+saving one route result will typically cost some bytes to kbytes. practical example, square CH:
+for CH to have about 1 arc-second resolution (~100m) we need point 5000x5000 grid. worst case scenario:
+save all possible routes. greedy and stupid approach: there are (5000x5000)^2 routes to be saved, each
+1kBytes. This will yield about ~900 000 000 000 000 kBytes -> 9 000 000 peta bytes. too much.
+
+so we can't save all routes, but we can save every 1000th route, this will reduce the amount of data to
+tiny ~1TB (worst case), I assume the actual case to be significantly less.
+
+this is only a greedy approach, I am sure, there are better solutions for routing on a even spaced 
+rectangular grid. on possibility I thought of:
+- highway hierarchies (also used in Google Maps for street routing)
+
+
+concluding from this following requirements need to be met:
+a) arbitrary large big routing grids (grid data >> local memory) -> grid mem scalability
+b) routing algorithm needs to be able to work with limited local memory -> routing alg. mem scalability
+c) routing results need to be persistable
+
+
+by having these requirements in mind a possible iterative implementation could look like this:
+
+1. iteration 
+o implement the grid and routing algorithm having a) + b) in mind (so I guess an abstraction layer is 
+required to detach arbitrary big data into smaller limited sized (<< local memory) data chunks.
+o don't perist data for caching
+o with this you should be able to create grids up to 500x500 points
+
+
+2. iteration
+o save all routing results to blob to the simplest db possible (why not files...)
+o pre-processing possible from now on
+
+3. iteration
+o extend grid and algorithm to meet requirements a) and b)
+o this iteration will be much slower but will be able to create grids >>500x500 points
+
+
+4. iteration
+o tune persistency layer for speed
+
+5. iteration
+o tune algorithms for speed
+
+
+
