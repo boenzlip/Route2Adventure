@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 import net.orxonox.gpr.http.FileServer;
 import net.orxonox.gpr.http.GeoDataServer;
+import net.orxonox.gpr.http.GoogleDirectionsServer;
 import net.orxonox.gpr.http.TileServer;
 import net.orxonox.gpr.http.WebServer;
 import net.orxonox.gpr.store.HeightProfileStore;
@@ -59,6 +60,7 @@ public class Route2Adventure {
     server.createContext("/tiles", new TileServer(mapTileStore));
     server.createContext("/htdoc", new FileServer());
     server.createContext("/geodata", new GeoDataServer(routeStore, heightProfileStore));
+    server.createContext("/directions", new GoogleDirectionsServer(routeStore, heightProfileStore));
     server.setExecutor(null); // creates a default executor
     server.start();
     System.out

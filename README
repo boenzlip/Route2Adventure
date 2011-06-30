@@ -3,7 +3,7 @@ Geographically Parameterized Outdoor Routing
 ============================================
 
 
-Simple Project Plan:
+Simple Project Plan:1
 
 Milestones:
 
@@ -34,6 +34,12 @@ Y.X: Routing Frenzy
 - make manual routing adjustments even easier
 - possibility of routing from location-name to location-name (instead of lat/lng points), eg. Bern -> Sion
 - fast routing entry via url: <url>/bern/sion
+
+
+Y.X Feature Frenzy
+==================
+- suggest some circular routes with a given start==end point and a total amount of time to be spend walking
+- show different possibilities to get from A->B (e.g. best 3 routes that differ from each other)
 
 
 Y.X: Social Integration

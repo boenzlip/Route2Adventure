@@ -1,29 +1,19 @@
 package net.orxonox.gpr.http;
 
 import java.awt.geom.Point2D;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.text.DecimalFormat;
 import java.util.Iterator;
 
-import javax.imageio.ImageIO;
-
-import org.geotools.graph.structure.line.BasicDirectedXYNode;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import net.orxonox.gpr.TileRenderer;
 import net.orxonox.gpr.data.HeightProfileData;
-import net.orxonox.gpr.data.HeightProfileData.HeightTuple;
-import net.orxonox.gpr.data.MapsTile;
+import net.orxonox.gpr.data.HeightProfileData.Waypoint;
 import net.orxonox.gpr.data.MapsTileRequest;
 import net.orxonox.gpr.data.MapsTileRouteData;
-import net.orxonox.gpr.graph.BasicDirectedXYZNode;
 import net.orxonox.gpr.store.HeightProfileStore;
-import net.orxonox.gpr.store.MapTileStore;
 import net.orxonox.gpr.store.RouteStore;
+
+import org.json.JSONArray;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
@@ -33,11 +23,30 @@ public class GeoDataServer extends AbstractServer {
   private RouteStore routeStore;
   private HeightProfileStore heightProfileStore;
 
-  public GeoDataServer(RouteStore routeStore, HeightProfileStore heightProfileStore) {
+  public static final String GEODATA_TIME = "geodata-time";
+  public static enum GeoDataType {
+    TIME("geodata-time"), DISTANCE("geodata-distance");
+    private String typeName;
+    
+    GeoDataType(String typeName) {
+      this.typeName = typeName;
+    }
+    
+    @Override
+    public String toString() {
+      return typeName;
+    }
+    
+    public String getName() {
+      return typeName;
+    }
+  }
+
+  public GeoDataServer(RouteStore routeStore,
+      HeightProfileStore heightProfileStore) {
     this.routeStore = routeStore;
     this.heightProfileStore = heightProfileStore;
   }
-
 
   public void handle(HttpExchange t) throws IOException {
 
@@ -81,6 +90,13 @@ public class GeoDataServer extends AbstractServer {
       endLng = getDoubleAttribute(t, "endLng");
     } catch (AttributeNotFoundException e) {
     }
+
+    String dataType = GeoDataType.DISTANCE.getName();
+    try {
+      dataType = getStringAttribute(t, "dataType");
+    } catch (AttributeNotFoundException e) {
+    }
+    
     h.add("Content-Type", "application/json");
 
     MapsTileRequest descriptor = new MapsTileRequest(x, y, zoom,
@@ -88,25 +104,32 @@ public class GeoDataServer extends AbstractServer {
             endLat));
     MapsTileRouteData routeData = routeStore.aquire(descriptor);
     HeightProfileData heightData = heightProfileStore.aquire(routeData);
-    
-    
-    JSONArray pathPoints = new JSONArray();
-    
-    Iterator<HeightTuple> iterator = heightData.iterator();
-    while(iterator.hasNext()) {
-      HeightTuple tuple = iterator.next();
-      
-      JSONArray pathPoint = new JSONArray();
-      
-      DecimalFormat twoDForm = new DecimalFormat("#.##");
-      Double distanceFormated = Double.valueOf(twoDForm.format(tuple.getDistance() / 1000.0));
 
+    JSONArray pathPoints = new JSONArray();
+
+    Iterator<Waypoint> iterator = heightData.iterator();
+    while (iterator.hasNext()) {
+      Waypoint tuple = iterator.next();
+
+      JSONArray pathPoint = new JSONArray();
+
+      DecimalFormat twoDForm = new DecimalFormat("#.##");
+      Double dataValue = null;
+      if (dataType.equals(GeoDataType.TIME)) {
+        dataValue = Double
+        .valueOf(twoDForm.format(tuple.getTime() / 3600.0f)); // Time in [h].
+      } else {
+        dataValue = Double.valueOf(twoDForm.format(tuple
+            .getDistance() / 1000.0)); // Distance in [km].
+      }
       
-      pathPoint.put(distanceFormated);
+      
+
+      pathPoint.put(dataValue);
       pathPoint.put(new Double(tuple.getHeight()));
       pathPoints.put(pathPoint);
     }
-    
+
     String response = pathPoints.toString();
     t.sendResponseHeaders(200, response.length());
     OutputStream os = t.getResponseBody();
