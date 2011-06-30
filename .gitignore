@@ -1,0 +1,15 @@
+*.class
+ 
+# eclipse conf file
+.settings
+.classpath
+.manager
+ 
+# building
+target
+build
+dist
+
+#other
+.scala_dependencies
+
