@@ -4,8 +4,10 @@ import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 
 import net.orxonox.google.PolylineEncoder;
 import net.orxonox.google.Track;
@@ -104,13 +106,55 @@ public class GoogleDirectionsServer extends AbstractServer {
     } catch (AttributeNotFoundException e) {
     }
 
+    String waypoints = null;
+    try {
+      waypoints = getStringAttribute(t, "waypoints");
+    } catch (AttributeNotFoundException e) {
+    }
+    List<Point2D.Double> waypointCoorindates = new ArrayList<Point2D.Double>();
+    waypointCoorindates.add(new Point2D.Double(startLng, startLat));
+    if (waypoints != null) {
+      String[] waypointElements = waypoints.split("/");
+      
+      for (String waypoint : waypointElements) {
+        String[] coordinates = waypoint.split(",");
+        double lat = Double.valueOf(coordinates[0]).doubleValue();
+        double lng = Double.valueOf(coordinates[1]).doubleValue();
+
+        waypointCoorindates.add(new Point2D.Double(lng, lat));
+      }
+    }
+    waypointCoorindates.add(new Point2D.Double(endLng, endLat));
+
+    // Assemble the map tile requests.
+    List<MapsTileRequest> mapTileRequests = new ArrayList<MapsTileRequest>();
+    for (int i = 0; i < waypointCoorindates.size() - 1; i++) {
+      mapTileRequests.add(new MapsTileRequest(x, y, zoom, waypointCoorindates.get(i),
+          waypointCoorindates.get(i + 1)));
+    }
+
+    // Execute each map tile request separately.
+    List<HeightProfileData> profileData = new ArrayList<HeightProfileData>();
+    for (MapsTileRequest request : mapTileRequests) {
+      MapsTileRouteData routeData = routeStore.aquire(request);
+      HeightProfileData heightData = heightProfileStore.aquire(routeData);
+      profileData.add(heightData);
+    }
+
+    // Now concatenate the result to one height profile data object.
+    HeightProfileData heightData = new HeightProfileData();
+    for (HeightProfileData data : profileData) {
+
+      Iterator<Waypoint> iterator = data.iterator();
+      while (iterator.hasNext()) {
+        Waypoint waypoint = iterator.next();
+        heightData.put(waypoint.getCoordinate(), waypoint.getDistance(), waypoint.getTime(),
+            waypoint.getHeight());
+      }
+
+    }
+
     h.add("Content-Type", "application/json");
-
-    MapsTileRequest descriptor = new MapsTileRequest(x, y, zoom, new Point2D.Double(startLng,
-        startLat), new Point2D.Double(endLng, endLat));
-    MapsTileRouteData routeData = routeStore.aquire(descriptor);
-    HeightProfileData heightData = heightProfileStore.aquire(routeData);
-
     DecimalFormat twoDForm = new DecimalFormat("#.##");
     JSONObject root = new JSONObject();
     try {
@@ -186,7 +230,7 @@ public class GoogleDirectionsServer extends AbstractServer {
       legs.put(leg);
       root.put("route", routes);
       route.put("leg", legs);
-      
+
       Track trak = new Track();
       iterator = heightData.iterator();
       while (iterator.hasNext()) {
@@ -199,20 +243,20 @@ public class GoogleDirectionsServer extends AbstractServer {
       overviewPolyline.put("points", createEncodings.get("encodedPoints"));
       overviewPolyline.put("levels", createEncodings.get("encodedLevels"));
       route.put("overview_polyline", overviewPolyline);
-      
-      
-//      <bounds> 
-//      <southwest> 
-//       <lat>34.0523600</lat> 
-//       <lng>-118.2435600</lng> 
-//      </southwest> 
-//      <northeast> 
-//       <lat>41.8781100</lat> 
-//       <lng>-87.6297900</lng> 
-//      </northeast> 
-//     </bounds>  
-      
-      
+
+
+      // <bounds>
+      // <southwest>
+      // <lat>34.0523600</lat>
+      // <lng>-118.2435600</lng>
+      // </southwest>
+      // <northeast>
+      // <lat>41.8781100</lat>
+      // <lng>-87.6297900</lng>
+      // </northeast>
+      // </bounds>
+
+
       leg.put("step", steps);
       leg.put("travel_mode", "WALKING");
 
@@ -233,13 +277,12 @@ public class GoogleDirectionsServer extends AbstractServer {
       duration.put("text", twoDForm.format(totalTime) + "h");
       leg.put("duration", duration);
 
-      
-      
+
       JSONObject bounds = new JSONObject();
       bounds.put("southwest", startLocation);
       bounds.put("northeast", endLocation);
       route.put("bounds", bounds);
-      
+
 
     } catch (JSONException e) {
       // TODO Auto-generated catch block

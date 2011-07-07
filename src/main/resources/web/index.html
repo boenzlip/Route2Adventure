@@ -54,17 +54,80 @@ div.jqplot-cursor-legend-swatch {
 <script language="javascript" type="text/javascript" src="/htdoc/js/jquery/plugins/jqplot.canvasTextRenderer.min.js?contentType=text/javascript"></script>
 <script language="javascript" type="text/javascript" src="/htdoc/js/jquery/plugins/jqplot.canvasAxisLabelRenderer.min.js?contentType=text/javascript"></script>
 
-<script language="javascript" type="text/javascript">
-var map;
 
+<script language="javascript" type="text/javascript">
+
+
+
+var markerContainer = {
+  size : 0,
+  elements : [null, null],
+  
+  
+  first : function(marker) {
+    this.elements[0] = marker;
+  },
+  
+  last : function(marker) {
+    this.elements[this.elements.length - 1] = marker;
+  },
+  
+  add : function(marker) {
+    var distanceArray = new Array();
+
+    for( var i = 0; i < this.elements.length - 1; i++) {
+      distanceArray[i] = this.distance(this.elements[i], marker) + this.distance(this.elements[i + 1], marker);
+    }
+    var index = 0;
+    var minValue = distanceArray[0];
+    for( var j = 1; j < distanceArray.length; j++) {
+      if( distanceArray[j] < minValue) {
+        minValue = distanceArray[j];
+        index = j;
+      }
+    }
+    //alert(index);
+    this.elements.splice(index + 1, 0, marker);
+  },
+  
+  clear : function() {
+    this.elements = [];
+  },
+  
+  distance: function(m1, m2) {
+    a = m1.getPosition();
+    b = m2.getPosition();
+    var sum = Math.pow(a.lat() - b.lat(), 2) + Math.pow(b.lng() - b.lng(), 2);
+    return Math.sqrt(sum);
+  },
+  
+  
+  getWaypointParams : function() {
+    var serializationString = "";
+    for( var i = 1; i < this.elements.length - 1; i++) {
+      serializationString += "" + this.elements[i].getPosition().lat() + "," + this.elements[i].getPosition().lng();
+      if(i != this.elements.length - 2) {
+        serializationString += "/";
+      }
+    }
+    return serializationString;
+  }
+    
+};
+
+
+
+
+
+var map;
 // Start/Stop positions.
 var lastClickedPoint; // is updated in function setMenuXY(caurrentLatLng)
 var startMarker;
 var stopMarker;
 var routingLayer;
 var heightMapPlot;
-var directionsRenderer;
 var routePolyline;
+var directionsPoint;
 
 
 function initialize() {
@@ -96,6 +159,7 @@ function initialize() {
 	} );
 	stopMarker.setVisible(false);
 	
+	
 	/* -------- Overlay ------------ */
 
 	var routingLayerOptions = {
@@ -105,34 +169,28 @@ function initialize() {
 		  opacity: 0.5
 	};
 	routingLayer = new google.maps.ImageMapType(routingLayerOptions);
-	//map.overlayMapTypes.insertAt(0, routingLayer);
+	
 	
 	 /* -------- Directions ------------ */
-	
-	
-  //directionsRenderer.setPanel(document.getElementById('directions'));
-
-  /*
-  var directionsService = new google.maps.DirectionsService();
-  var request = {
-    origin: "Bern",
-    destination: "Biel",
-
-    travelMode: google.maps.DirectionsTravelMode.DRIVING,
-    unitSystem: google.maps.DirectionsUnitSystem.METRIC
-  };
-  directionsService.route(request, function(response, status) {
-    if (status == google.maps.DirectionsStatus.OK) {
-    directionsRenderer.setDirections(response);
-    } else {
-    alert('Error: ' + status);
-    }
-  });
-  */
+	 directionsRenderer = new google.maps.DirectionsRenderer();
+   directionsRenderer.setMap(map);
   
-  directionsRenderer = new google.maps.DirectionsRenderer();
-  directionsRenderer.setMap(map);
-  
+	 directionsPoint = new google.maps.Marker({
+    position: new google.maps.LatLng(-25.363882,131.044922),
+    map: map,
+    title:"Mouse"
+   });
+	 directionsPoint.setVisible(false);
+	 directionsPoint.setDraggable(true);
+	 directionsPoint.setClickable(false);
+	 google.maps.event.addListener(directionsPoint, 'click', handleMarkerClick);
+	 google.maps.event.addListener(directionsPoint, 'drag', handleMarkerDrag);
+	 google.maps.event.addListener(directionsPoint, 'dragstart', handleMarkerDragStart);
+	 google.maps.event.addListener(directionsPoint, 'dragend', handleMarkerDragEnd);
+
+	
+	//map.overlayMapTypes.insertAt(0, routingLayer);
+	
 	
 	/* -------- JQuery Plot ------------ */
 	$.jqplot.config.enablePlugins = true;           	                  
@@ -202,20 +260,20 @@ function getCanvasXY(caurrentLatLng){
 	     $.getJSON(dataUrl, function(data) {
 	       //alert(data.route[0].overview_polyline.points);
 	       //alert(data.summary);
-	       directionsRenderer.setDirections(response);
-	       
-
+	       //directionsRenderer.setDirections(response);
 	       
 	       var polyOptions = {
 	           strokeColor: '#0000ff',
 	           strokeOpacity: 1.0,
 	           strokeWeight: 2
-	           //points: data.route[0].overview_polyline.points,
-	           //levels: route[0].overview_polyline.levels
          }
 	       routePolyline = new google.maps.Polyline(polyOptions);	       
 	       routePolyline.setPath(google.maps.geometry.encoding.decodePath(data.route[0].overview_polyline.points));
-	       //routePolyline.setMap(map);
+	       routePolyline.setMap(map);
+	       
+	       google.maps.event.addListener(routePolyline, 'click', handleClickEvent);
+	       google.maps.event.addListener(routePolyline, 'mouseover', handleMouseOverEvent);
+
 
 	     });
 
@@ -284,6 +342,45 @@ function getCanvasXY(caurrentLatLng){
 	   }
    }
    
+   function handleClickEvent(event) {
+     alert("click" + event);
+   }
+   function handleMouseOverEvent(event) {
+     //alert("mouseover" + event);
+     directionsPoint.setPosition(event.latLng);
+     directionsPoint.setVisible(true);
+   }
+   function handleMarkerClick(event) {
+     alert("click icons");
+   }
+   function handleMarkerDrag(event) {
+     
+   }
+   function handleMarkerDragStart(event) {
+     // removing any old polyline.
+     if(routePolyline != null) {
+       routePolyline.setMap(null);
+     } 
+   }
+   function handleMarkerDragEnd(event) {
+     
+     newMarker = new google.maps.Marker({
+       position: event.latLng,
+       map: map,
+       title:"Waypoint"
+      });
+     newMarker.setVisible(true);
+     newMarker.setDraggable(false);
+     newMarker.setClickable(false);
+     
+     markerContainer.add(newMarker);
+     
+     directionsPoint.setVisible(false);
+     
+     updateOverlay();
+   }
+   
+   // Marker for mte
    function myMove (ev, gridpos, datapos, neighbor, plot) {
      //alert(gridpos.x + " - " + gridpos.y + " data: " + datapos.x + " - " + datapos.y + " - " + plot);
     }
@@ -293,6 +390,10 @@ function getCanvasXY(caurrentLatLng){
 	   hideContextMenu();
 	   startMarker.setPosition(lastClickedPoint);
 	   startMarker.setVisible(true);
+	   
+	   // Manage point container.
+	   markerContainer.first(startMarker);
+	   
      // removing any old polyline.
      if(routePolyline != null) {
        routePolyline.setMap(null);
@@ -305,6 +406,10 @@ function getCanvasXY(caurrentLatLng){
 	   hideContextMenu();
 	   stopMarker.setPosition(lastClickedPoint);
 	   stopMarker.setVisible(true);
+	   
+	   // Manage point container.
+	   markerContainer.last(stopMarker);
+	   
      // removing any old polyline.
      if(routePolyline != null) {
        routePolyline.setMap(null);
@@ -333,7 +438,8 @@ function getCanvasXY(caurrentLatLng){
 
        return "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + '&startLat=' + 
          startPoint.lat() + '&startLng=' + startPoint.lng() +  '&endLat=' + 
-         destinationPoint.lat() + '&endLng=' + destinationPoint.lng();
+         destinationPoint.lat() + '&endLng=' + destinationPoint.lng() + "&waypoints=" + 
+         markerContainer.getWaypointParams();
    }
    
 </script>
