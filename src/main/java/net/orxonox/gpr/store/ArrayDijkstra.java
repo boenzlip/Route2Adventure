@@ -101,6 +101,8 @@ public class ArrayDijkstra {
 				if (x == start[X] && y == start[Y]) {
 					// set start's distance to 0.
 					graph[x][y][DISTANCE] = 0.;
+					graph[x][y][P_X] = null;
+					graph[x][y][P_Y] = null;
 				} else {
 					graph[x][y][DISTANCE] = POSITIVE_INFINITY;
 				}
