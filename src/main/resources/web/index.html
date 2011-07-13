@@ -70,8 +70,26 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
 
 
 <script language="javascript" type="text/javascript">
+  var routePath = {
+      elements : [],
+      
+      add : function(polyline) {
+        elements.push(polyline);
+      },
+  
+      hide : function() {
+        
+      }
+      
+      clear : function() {
+        for(var i = 0; i < elements.length; i++) {
+          elements[i].setMap(null);
+        }
+        elements = [];
+      }
+  };
+
   var markerContainer = {
-    size : 0,
     elements : [ null, null ],
 
     first : function(marker) {
@@ -264,29 +282,35 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
         //alert(data.summary);
         //directionsRenderer.setDirections(response);
 
-        var polyOptions = {
-          strokeColor : '#0000ff',
-          strokeOpacity : 1.0,
-          strokeWeight : 2,
-          zIndex : 1
-        }
-        routePolyline = new google.maps.Polyline(polyOptions);
-        routePolyline.setPath(google.maps.geometry.encoding.decodePath(data.route[0].overview_polyline.points));
-        routePolyline.setMap(map);
+        for ( var i = 0; i < data.route[0].leg.length; i++) {
 
-        var eventPolyOptions = {
+          var polyOptions = {
+            strokeColor : '#0000ff',
+            strokeOpacity : 1.0,
+            strokeWeight : 2,
+            zIndex : 1
+          }
+          routePolyline = new google.maps.Polyline(polyOptions);
+          routePolyline
+              .setPath(google.maps.geometry.encoding.decodePath(data.route[0].leg[i].overview_polyline.points));
+          routePolyline.setMap(map);
+
+          var eventPolyOptions = {
             strokeColor : '#00ffff',
             strokeOpacity : 0.0,
             strokeWeight : 80,
             zIndex : 0
           }
-        eventRoutePolyline = new google.maps.Polyline(eventPolyOptions);
-        eventRoutePolyline.setPath(google.maps.geometry.encoding.decodePath(data.route[0].overview_polyline.points));
-        eventRoutePolyline.setMap(map);
+          eventRoutePolyline = new google.maps.Polyline(eventPolyOptions);
+          eventRoutePolyline.setPath(google.maps.geometry.encoding
+              .decodePath(data.route[0].leg[i].overview_polyline.points));
+          eventRoutePolyline.setMap(map);
 
-        google.maps.event.addListener(eventRoutePolyline, 'mousedown', handleClickEvent);
-        google.maps.event.addListener(eventRoutePolyline, 'mousemove', handleMouseOverEvent);
-
+          google.maps.event.addListener(eventRoutePolyline, 'mousedown', function(event) {
+            handleClickEvent(event, i);
+          });
+          google.maps.event.addListener(eventRoutePolyline, 'mousemove', handleMouseOverEvent);
+        }
       });
 
       //map.overlayMapTypes.clear();
@@ -360,7 +384,8 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
     }
   }
 
-  function handleClickEvent(event) {
+  function handleClickEvent(event, i) {
+    alert(i);
     handleMarkerDragStart(event);
   }
   function handleMouseOverEvent(event) {
