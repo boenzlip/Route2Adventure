@@ -40,7 +40,7 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
   // private Path path;
   private BasicGraph graph;
   private BasicDirectedXYZNode[][] nodeMatrix;
-  private static final int CACHE_SIZE = 5;
+  private static final int CACHE_SIZE = 10;
   private Map<String, MapsTileRouteData> routeCache = new LRUMap(CACHE_SIZE);
 
   public synchronized MapsTileRouteData aquire(MapsTileRequest descriptor) {

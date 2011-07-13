@@ -71,22 +71,30 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
 
 <script language="javascript" type="text/javascript">
   var routePath = {
-      elements : [],
-      
-      add : function(polyline) {
-        elements.push(polyline);
-      },
-  
-      hide : function() {
-        
+    routeElements : [],
+    eventElements : [],
+
+    add : function(routePolyline, eventPolyline) {
+      this.routeElements.push(routePolyline);
+      this.eventElements.push(eventPolyline);
+    },
+
+    hide : function() {
+
+    },
+
+    isEmpty : function() {
+      return this.routeElements.length == 0;
+    },
+
+    clear : function() {
+      for ( var i = 0; i < this.routeElements.length; i++) {
+        this.routeElements[i].setMap(null);
+        this.eventElements[i].setMap(null);
       }
-      
-      clear : function() {
-        for(var i = 0; i < elements.length; i++) {
-          elements[i].setMap(null);
-        }
-        elements = [];
-      }
+      this.routeElements = [];
+      this.eventElements = [];
+    }
   };
 
   var markerContainer = {
@@ -100,22 +108,7 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
       this.elements[this.elements.length - 1] = marker;
     },
 
-    add : function(marker) {
-      var distanceArray = new Array();
-
-      // nearest points;
-      for ( var i = 0; i < this.elements.length - 1; i++) {
-        distanceArray[i] = this.distance(this.elements[i], marker) + this.distance(this.elements[i + 1], marker);
-      }
-      var index = 0;
-      var minValue = distanceArray[0];
-      for ( var j = 1; j < distanceArray.length; j++) {
-        if (distanceArray[j] < minValue) {
-          minValue = distanceArray[j];
-          index = j;
-        }
-      }
-      //alert(index);
+    add : function(marker, index) {
       this.elements.splice(index + 1, 0, marker);
     },
 
@@ -150,9 +143,9 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
   var stopMarker;
   var routingLayer;
   var heightMapPlot;
-  var routePolyline;
-  var eventRoutePolyline;
   var directionsPoint;
+  var currentDraggedPolylineIndex; // When dragging markers on route plolylines to add intermediate waypoints, this is the leg index.
+  var markerIsDragged; // Is true if the routing marker is currently dragged (between dragged start and end).
 
   function initialize() {
     var latlng = new google.maps.LatLng(46.785, 7.344);
@@ -202,15 +195,8 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
     directionsRenderer = new google.maps.DirectionsRenderer();
     directionsRenderer.setMap(map);
 
-    directionsPoint = new google.maps.Marker({
-      position : new google.maps.LatLng(-25.363882, 131.044922),
-      map : map,
-      title : "Mouse",
-      zIndex : 3
-    });
-    directionsPoint.setVisible(false);
-    directionsPoint.setDraggable(true);
-    directionsPoint.setClickable(false);
+    createHoverMarker(new google.maps.LatLng(-25.363882, 131.044922));
+
     google.maps.event.addListener(directionsPoint, 'click', handleMarkerClick);
     google.maps.event.addListener(directionsPoint, 'drag', handleMarkerDrag);
     google.maps.event.addListener(directionsPoint, 'dragstart', handleMarkerDragStart);
@@ -221,6 +207,52 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
     /* -------- JQuery Plot ------------ */
     $.jqplot.config.enablePlugins = true;
 
+  }
+
+  function createHoverMarker(position) {
+    // Add markers to the map
+
+    // Marker sizes are expressed as a Size of X,Y
+    // where the origin of the image (0,0) is located
+    // in the top left of the image.
+
+    // Origins, anchor positions and coordinates of the marker
+    // increase in the X direction to the right and in
+    // the Y direction down.
+    var image = new google.maps.MarkerImage('htdoc/pointicon.png',
+    // This marker is 20 pixels wide by 32 pixels tall.
+    new google.maps.Size(32, 37),
+    // The origin for this image is 0,0.
+    new google.maps.Point(0, 0),
+    // The anchor for this image is the base of the flagpole at 0,32.
+    new google.maps.Point(16, 30));
+    //var shadow = new google.maps.MarkerImage('images/beachflag_shadow.png',
+    // The shadow image is larger in the horizontal dimension
+    // while the position and offset are the same as for the main image.
+    //new google.maps.Size(37, 37), new google.maps.Point(0, 0), new google.maps.Point(0, 37));
+    // Shapes define the clickable region of the icon.
+    // The type defines an HTML <area> element 'poly' which
+    // traces out a polygon as a series of X,Y points. The final
+    // coordinate closes the poly by connecting to the first
+    // coordinate.
+    var shape = {
+      coord : [ 0, 0, 0, 30, 30, 30, 30, 0 ],
+      type : 'poly'
+    };
+
+    directionsPoint = new google.maps.Marker({
+      animation : null,
+      position : position,
+      map : map,
+      icon : image,
+      shape : shape,
+      title : "waypoint",
+      zIndex : 4
+    });
+
+    directionsPoint.setVisible(false);
+    directionsPoint.setDraggable(true);
+    directionsPoint.setClickable(false);
   }
 
   function getCanvasXY(caurrentLatLng) {
@@ -290,7 +322,7 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
             strokeWeight : 2,
             zIndex : 1
           }
-          routePolyline = new google.maps.Polyline(polyOptions);
+          var routePolyline = new google.maps.Polyline(polyOptions);
           routePolyline
               .setPath(google.maps.geometry.encoding.decodePath(data.route[0].leg[i].overview_polyline.points));
           routePolyline.setMap(map);
@@ -301,15 +333,13 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
             strokeWeight : 80,
             zIndex : 0
           }
-          eventRoutePolyline = new google.maps.Polyline(eventPolyOptions);
+          var eventRoutePolyline = new google.maps.Polyline(eventPolyOptions);
           eventRoutePolyline.setPath(google.maps.geometry.encoding
               .decodePath(data.route[0].leg[i].overview_polyline.points));
           eventRoutePolyline.setMap(map);
 
-          google.maps.event.addListener(eventRoutePolyline, 'mousedown', function(event) {
-            handleClickEvent(event, i);
-          });
-          google.maps.event.addListener(eventRoutePolyline, 'mousemove', handleMouseOverEvent);
+          routePath.add(routePolyline, eventRoutePolyline);
+          addPolylineEventHandlers(routePolyline, eventRoutePolyline, i);
         }
       });
 
@@ -384,14 +414,33 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
     }
   }
 
-  function handleClickEvent(event, i) {
-    alert(i);
-    handleMarkerDragStart(event);
+  function addPolylineEventHandlers(routePolyline, eventRoutePolyline, index) {
+    google.maps.event.addListener(eventRoutePolyline, 'mousedown', function(event) {
+      //handleClickEvent(event, index);
+    });
+    google.maps.event.addListener(eventRoutePolyline, 'mouseup', function(event) {
+      //handleClickEvent(event, index);
+    });
+    google.maps.event.addListener(eventRoutePolyline, 'mousemove', function(event) {
+      handleMouseOverEvent(event, index);
+    });
+    google.maps.event.addListener(eventRoutePolyline, 'mouseout', function(event) {
+      handleMouseOutEvent(event);
+    });
   }
-  function handleMouseOverEvent(event) {
-    //alert("mouseover" + event);
+
+  function handleClickEvent(event, index) {
+    currentDraggedPolylineIndex = index;
+  }
+  function handleMouseOverEvent(event, index) {
     directionsPoint.setPosition(event.latLng);
     directionsPoint.setVisible(true);
+    currentDraggedPolylineIndex = index;
+  }
+  function handleMouseOutEvent(event) {
+    if (!markerIsDragged) {
+      directionsPoint.setVisible(false);
+    }
   }
   function handleMarkerClick(event) {
     alert("click icons");
@@ -401,23 +450,23 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
   }
   function handleMarkerDragStart(event) {
     // removing any old polyline.
-    if (routePolyline != null) {
-      routePolyline.setMap(null);
-      eventRoutePolyline.setMap(null);
+    if (!routePath.isEmpty()) {
+      routePath.clear();
     }
+    markerIsDragged = true;
   }
   function handleMarkerDragEnd(event) {
-
+    markerIsDragged = false;
     newMarker = new google.maps.Marker({
       position : event.latLng,
       map : map,
-      title : "Waypoint"
+      title : "Waypoint",
     });
     newMarker.setVisible(true);
     newMarker.setDraggable(false);
     newMarker.setClickable(false);
 
-    markerContainer.add(newMarker);
+    markerContainer.add(newMarker, currentDraggedPolylineIndex);
 
     directionsPoint.setVisible(false);
 
@@ -438,9 +487,8 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
     markerContainer.first(startMarker);
 
     // removing any old polyline.
-    if (routePolyline != null) {
-      routePolyline.setMap(null);
-      eventRoutePolyline.setMap(null);
+    if (!routePath.isEmpty()) {
+      routePath.clear();
     }
 
     updateOverlay();
@@ -455,9 +503,8 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
     markerContainer.last(stopMarker);
 
     // removing any old polyline.
-    if (routePolyline != null) {
-      routePolyline.setMap(null);
-      eventRoutePolyline.setMap(null);
+    if (!routePath.isEmpty()) {
+      routePath.clear();
     }
 
     updateOverlay();
