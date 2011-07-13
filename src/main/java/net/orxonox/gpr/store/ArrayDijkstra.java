@@ -19,32 +19,31 @@ public class ArrayDijkstra {
 	static final int P_Y = 3;
 	static final int X = 0;
 	static final int Y = 1;
-	private static double DELTA_IN_M = 100;
+	private final double deltaDistance;
 	private static final double VERTICAL_FACTOR = 13.0;
 
 	private final Double[][][] graph;
 
 	public ArrayDijkstra(final Double[][][] graph) {
-	  this(graph, 100.);
+		this(graph, 100.);
 	}
 
 	public ArrayDijkstra(final Double[][][] graph, double deltaDistance) {
-	  DELTA_IN_M = deltaDistance;
-	  this.graph = graph;
+		this.deltaDistance = deltaDistance;
+		this.graph = graph;
 	}
 
-	
 	public int getGraphWidth() {
-	  return graph.length;
+		return graph.length;
 	}
-	
+
 	public int getGraphHeight() {
-	  if(graph.length > 0) {
-	    return graph[0].length;
-	  }
-	  return 0;
+		if (graph.length > 0) {
+			return graph[0].length;
+		}
+		return 0;
 	}
-	
+
 	/**
 	 * @param graph
 	 *            [x][y] - [0]: height, [1]: distance, [2]: previous x, [3]:
@@ -61,10 +60,7 @@ public class ArrayDijkstra {
 		}
 
 		// init the Q sorted by distance
-		SortedSet<Node> q = initQ();
-
-		// set start's distance to 0.
-		graph[start[X]][start[Y]][DISTANCE] = 0.;
+		SortedSet<Node> q = initQ(start);
 
 		while (!q.isEmpty()) {
 			Node current = q.first();
@@ -98,11 +94,16 @@ public class ArrayDijkstra {
 		return null;
 	}
 
-	private SortedSet<Node> initQ() {
+	private SortedSet<Node> initQ(final int[] start) {
 		SortedSet<Node> q = new TreeSet<Node>();
 		for (int x = 0; x < graph.length; x++) {
 			for (int y = 0; y < graph[x].length; y++) {
-				graph[x][y][DISTANCE] = POSITIVE_INFINITY;
+				if (x == start[X] && y == start[Y]) {
+					// set start's distance to 0.
+					graph[x][y][DISTANCE] = 0.;
+				} else {
+					graph[x][y][DISTANCE] = POSITIVE_INFINITY;
+				}
 				q.add(new Node(x, y));
 			}
 		}
@@ -149,8 +150,7 @@ public class ArrayDijkstra {
 		}
 
 		public Double distanceTo(Node that) {
-			// TODO introduce distance function
-			double delta = euclideanDistance(this, that);
+			double delta = euclideanDistance(this, that, deltaDistance);
 			return abs(this.getHeight() - that.getHeight()) * VERTICAL_FACTOR
 					+ delta;
 		}
@@ -236,8 +236,9 @@ public class ArrayDijkstra {
 	 * @param b
 	 * @return the distance between two {@link Node}s
 	 */
-	private static double euclideanDistance(final Node a, final Node b) {
-		return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.)) * DELTA_IN_M;
+	private static double euclideanDistance(final Node a, final Node b,
+			final double deltaDistance) {
+		return sqrt(pow(a.x - b.x, 2.) + pow(a.y - b.y, 2.)) * deltaDistance;
 	}
 
 	/**
@@ -258,7 +259,7 @@ public class ArrayDijkstra {
 		return (x >= 0 && y >= 0 && x < graph.length && y < graph[x].length);
 	}
 
-  public double getHeight(int x, int y) {
-    return graph[x][y][HEIGHT];
-  }
+	public double getHeight(int x, int y) {
+		return graph[x][y][HEIGHT];
+	}
 }
