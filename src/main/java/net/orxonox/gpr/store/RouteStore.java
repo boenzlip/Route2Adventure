@@ -1,9 +1,12 @@
 package net.orxonox.gpr.store;
 
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.geom.Point2D;
 import java.awt.geom.Point2D.Double;
 import java.io.IOException;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 
 import net.orxonox.gpr.Route2Adventure;
@@ -11,6 +14,10 @@ import net.orxonox.gpr.data.MapsTileRequest;
 import net.orxonox.gpr.data.MapsTileRouteData;
 import net.orxonox.gpr.graph.BasicDirectedXYZNode;
 import net.orxonox.gpr.graph.EdgeWeight;
+import net.orxonox.gpr.graph.GeoGraph;
+import net.orxonox.gpr.graph.GeoLocation;
+import net.orxonox.gpr.graph.GeoPath;
+import net.orxonox.gpr.graph.GeoRegion;
 
 import org.apache.commons.collections.map.LRUMap;
 import org.geotools.coverage.grid.GridCoverage2D;
@@ -35,13 +42,18 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 import com.vividsolutions.jts.geom.Coordinate;
 
+import static net.orxonox.gpr.store.ArrayDijkstra.HEIGHT;
+
 public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
 
   // private Path path;
-  private BasicGraph graph;
+//  private BasicGraph graph;
   private BasicDirectedXYZNode[][] nodeMatrix;
   private static final int CACHE_SIZE = 10;
+  public static final double GRID_WIDTH = 0.01; // arc degrees.
   private Map<String, MapsTileRouteData> routeCache = new LRUMap(CACHE_SIZE);
+  private ArrayDijkstra arrayDijkstra;
+  private GeoRegion geoRegion;
 
   public synchronized MapsTileRouteData aquire(MapsTileRequest descriptor) {
 
@@ -65,38 +77,63 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
   private MapsTileRouteData routeGraph(Point2D.Double startLocation,
       Point2D.Double destinationLocation) {
 
-    // create a strategy for weighting edges in the graph
-    EdgeWeighter weighter = new EdgeWeighter() {
+    Point startCoordinates = sphereToGrid(startLocation);
+    Point destinationCoodiantes = sphereToGrid(destinationLocation);
+    
+    List<int[]> shortestPath = arrayDijkstra.shortestPath(
+      new int[] { startCoordinates.x, startCoordinates.y }, new int[] { destinationCoodiantes.x, destinationCoodiantes.y });
+    
+//    // create a strategy for weighting edges in the graph
+//    EdgeWeighter weighter = new EdgeWeighter() {
+//
+//      public double getWeight(Edge e) {
+//        return ((EdgeWeight) e.getObject()).getWeight();
+//      }
+//    };
+//    DijkstraShortestPathFinder pf = new DijkstraShortestPathFinder(graph,
+//        getNearestNode(startLocation), weighter);
+//    pf.calculate();
 
-      public double getWeight(Edge e) {
-        return ((EdgeWeight) e.getObject()).getWeight();
-      }
-    };
-    DijkstraShortestPathFinder pf = new DijkstraShortestPathFinder(graph,
-        getNearestNode(startLocation), weighter);
-    pf.calculate();
-
-    Path path = pf.getPath(getNearestNode(destinationLocation));
-    return new MapsTileRouteData(graph, path);
+    GeoPath geoPath = new GeoPath();
+    for(int i = 0; i < shortestPath.size(); i++) {
+      geoPath.appendPoint(gridToSphere(shortestPath.get(i)[0], shortestPath.get(i)[1]) );
+    }
+    
+    GeoGraph geoGraph = new GeoGraph(arrayDijkstra, geoRegion);
+    
+    return new MapsTileRouteData(geoGraph, geoPath);
   }
 
-  private Graphable getNearestNode(Point2D.Double location) {
+  
+  private GeoLocation gridToSphere(int x, int y) {
+    double dX = geoRegion.getX1() + x * GRID_WIDTH ;
+    double dY = geoRegion.getY1() + y * GRID_WIDTH ;
+    return new GeoLocation(dX, dY, arrayDijkstra.getHeight(x, y));
+  }
+  
+  private Point sphereToGrid(Point2D.Double location) {
+    
+    int dX = (int) Math.round((location.x - geoRegion.getX1()) / GRID_WIDTH) ;
+    int dY = (int) Math.round((location.y - geoRegion.getY1()) / GRID_WIDTH) ;
+    
+    return new Point(dX, dY);
+    
     // TODO greedy closest neighbor lookup can be done much faster.
-    double minDistance = java.lang.Double.MAX_VALUE;
-    Graphable node = null;
-    for (int i = 1; i < nodeMatrix.length - 1; i++) {
-      for (int j = 1; j < nodeMatrix[i].length - 1; j++) {
-        double dx = nodeMatrix[i][j].getCoordinate().x - location.x;
-        double dy = nodeMatrix[i][j].getCoordinate().y - location.y;
-        double distance = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
-        if (distance < minDistance) {
-          node = nodeMatrix[i][j];
-          minDistance = distance;
-        }
-      }
-    }
-
-    return node;
+//    double minDistance = java.lang.Double.MAX_VALUE;
+//    Graphable node = null;
+//    for (int i = 1; i < arrayDijkstra.getGraphWidth() - 1; i++) {
+//      for (int j = 1; j < arrayDijkstra.getGraphHeight()- 1; j++) {
+//        double dx = nodeMatrix[i][j].getCoordinate().x - location.x;
+//        double dy = nodeMatrix[i][j].getCoordinate().y - location.y;
+//        double distance = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+//        if (distance < minDistance) {
+//          node = nodeMatrix[i][j];
+//          minDistance = distance;
+//        }
+//      }
+//    }
+//
+//    return node;
   }
 
   public void init() {
@@ -162,20 +199,40 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
     double y = env.getMinimum(1);
 
     // This calculation is angle constant not distance constant over the globe.
-    final double gridWidth = 0.01; // arc degrees.
-    final int nX = (int) ((env.getMaximum(0) - env.getMinimum(0)) / gridWidth);
-    final int nY = (int) ((env.getMaximum(1) - env.getMinimum(1)) / gridWidth);
+    final int nX = (int) ((env.getMaximum(0) - env.getMinimum(0)) / GRID_WIDTH);
+    final int nY = (int) ((env.getMaximum(1) - env.getMinimum(1)) / GRID_WIDTH);
     System.out.println("Array dimensions: " + nX + ", " + nY);
+    geoRegion = new GeoRegion(x, y, env.getMaximum(0), env.getMaximum(1));
 
-    final int graphScalingFactor = 1;
+    
+   
+    java.lang.Double[][][] graphArray = new java.lang.Double[nX][nY][4];
+    for (int xOffset = 0; xOffset < nX; xOffset++) {
+      for (int yOffset = 0; yOffset < nY; yOffset++) {
+        double currentX = x + xOffset * GRID_WIDTH;
+        double currentY = y + yOffset * GRID_WIDTH;
 
+        double latitude = currentX;
+        double longitude = currentY;
+
+        double[] height = new double[1];
+        coverage.evaluate(new Point2D.Double(latitude, longitude), height);
+        graphArray[xOffset][yOffset][ArrayDijkstra.HEIGHT] = new java.lang.Double(height[0]);
+      }
+    }
+    double matrixDistance = matrixNodeDistance(env, calc);
+    System.out.println("Matrix Distance: " + matrixDistance + "m");
+    arrayDijkstra = new ArrayDijkstra(graphArray, matrixDistance);
+    
+    
+    /*
     // Create the node matrix.
     nodeMatrix = new BasicDirectedXYZNode[nX][nY];
     for (int xOffset = 0; xOffset < nX; xOffset++) {
       for (int yOffset = 0; yOffset < nY; yOffset++) {
         BasicDirectedXYZNode node = new BasicDirectedXYZNode();
-        double currentX = x + xOffset * gridWidth;
-        double currentY = y + yOffset * gridWidth;
+        double currentX = x + xOffset * GRID_WIDTH;
+        double currentY = y + yOffset * GRID_WIDTH;
 
         double latitude = currentX * graphScalingFactor;
         double longitude = currentY * graphScalingFactor;
@@ -220,14 +277,27 @@ public class RouteStore implements IStore<MapsTileRequest, MapsTileRouteData> {
             yOffset + 1, calc));
       }
     }
+ 
 
     graph = (BasicGraph) graphGen.getGraph();
-
+   */
   }
 
   public void teardown() {
     // TODO Auto-generated method stub
 
+  }
+  
+  private double matrixNodeDistance(Envelope env, GeodeticCalculator calc) {
+    
+    double x = env.getMinimum(0);
+    double y = env.getMinimum(1);
+
+    calc.setStartingGeographicPoint(x, y);
+    calc.setDestinationGeographicPoint(x, y + GRID_WIDTH);
+    double distance = calc.getOrthodromicDistance();
+
+    return distance;
   }
 
   private BasicDirectedEdge createEdge(GridCoverage2D coverage,

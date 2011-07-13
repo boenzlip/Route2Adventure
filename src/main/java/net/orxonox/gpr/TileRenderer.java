@@ -11,6 +11,9 @@ import java.awt.image.BufferedImage;
 import java.util.Iterator;
 
 import net.orxonox.gpr.data.MapsTile;
+import net.orxonox.gpr.graph.GeoGraph;
+import net.orxonox.gpr.graph.GeoLocation;
+import net.orxonox.gpr.graph.GeoPath;
 
 import org.geotools.graph.path.Path;
 import org.geotools.graph.structure.Graph;
@@ -35,7 +38,7 @@ public class TileRenderer {
   }
 
   @SuppressWarnings("unchecked")
-  public MapsTile renderTile(Graph graph, Path path, int n, int m, int zoom) {
+  public MapsTile renderTile(GeoGraph graph, GeoPath path, int n, int m, int zoom) {
 
     // System.out.println(n + ", " + m + " @ " + zoom);
 
@@ -92,7 +95,7 @@ public class TileRenderer {
 
     }
     if (path != null) {
-      Iterator<XYNode> it = path.iterator();
+      Iterator<GeoLocation> it = path.iterator();
       paintPoints(it, ig2, pointSize, Color.GREEN);
     }
 
@@ -140,22 +143,16 @@ public class TileRenderer {
     return y;
   }
 
-  private void paintPoints(Iterator<XYNode> it, Graphics g, int pointSize) {
+  private void paintPoints(Iterator<GeoLocation> it, Graphics g, int pointSize) {
     paintPoints(it, g, pointSize, new Color(0.0f, 0.0f, 0.0f, 0.5f));
   }
 
-  private void paintPoints(Iterator<XYNode> it, Graphics g, int pointSize,
+  private void paintPoints(Iterator<GeoLocation> it, Graphics g, int pointSize,
       Color color) {
     while (it.hasNext()) {
-      Object next = it.next();
-      if (!(next instanceof XYNode)) {
-        throw new RuntimeException(
-            "I can't draw a node that doesn't have a coordinate.");
-      }
-      g.setColor(color);
-
-      Coordinate coord = ((XYNode) next).getCoordinate();
-      Point p = latLngToRelativePixel(coord.y, coord.x, tileX, tileY, tileZoom);
+      GeoLocation coord = it.next();
+     
+      Point p = latLngToRelativePixel(coord.getLongitude(), coord.getLatitude(), tileX, tileY, tileZoom);
       if (new Rectangle(0, 0, tileWidth, tileHeight).contains(p)) {
         g.fillRect(p.x - pointSize / 2, p.y - pointSize / 2, pointSize,
             pointSize);

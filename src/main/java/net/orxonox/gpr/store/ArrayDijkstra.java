@@ -19,15 +19,32 @@ public class ArrayDijkstra {
 	static final int P_Y = 3;
 	static final int X = 0;
 	static final int Y = 1;
-	private static final double DELTA_IN_M = 100.;
+	private static double DELTA_IN_M = 100;
 	private static final double VERTICAL_FACTOR = 13.0;
 
 	private final Double[][][] graph;
 
 	public ArrayDijkstra(final Double[][][] graph) {
-		this.graph = graph;
+	  this(graph, 100.);
 	}
 
+	public ArrayDijkstra(final Double[][][] graph, double deltaDistance) {
+	  DELTA_IN_M = deltaDistance;
+	  this.graph = graph;
+	}
+
+	
+	public int getGraphWidth() {
+	  return graph.length;
+	}
+	
+	public int getGraphHeight() {
+	  if(graph.length > 0) {
+	    return graph[0].length;
+	  }
+	  return 0;
+	}
+	
 	/**
 	 * @param graph
 	 *            [x][y] - [0]: height, [1]: distance, [2]: previous x, [3]:
@@ -240,4 +257,8 @@ public class ArrayDijkstra {
 	private boolean inBounds(int x, int y) {
 		return (x >= 0 && y >= 0 && x < graph.length && y < graph[x].length);
 	}
+
+  public double getHeight(int x, int y) {
+    return graph[x][y][HEIGHT];
+  }
 }

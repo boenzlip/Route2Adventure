@@ -1,23 +1,24 @@
 package net.orxonox.gpr.data;
 
-import org.geotools.graph.path.Path;
-import org.geotools.graph.structure.Graph;
+import net.orxonox.gpr.graph.GeoGraph;
+import net.orxonox.gpr.graph.GeoPath;
+
 
 public class MapsTileRouteData {
 
-  private Graph graph;
-  private Path path;
+  private GeoGraph graph;
+  private GeoPath path;
 
-  public MapsTileRouteData(Graph graph, Path path) {
+  public MapsTileRouteData(GeoGraph graph, GeoPath path) {
     this.graph = graph;
     this.path = path;
   }
 
-  public Graph getGraph() {
+  public GeoGraph getGraph() {
     return graph;
   }
 
-  public Path getPath() {
+  public GeoPath getPath() {
     return path;
   }
 

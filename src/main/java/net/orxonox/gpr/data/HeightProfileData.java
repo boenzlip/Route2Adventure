@@ -4,6 +4,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import net.orxonox.gpr.graph.GeoLocation;
+
 import com.vividsolutions.jts.geom.Coordinate;
 
 /**
@@ -20,13 +22,13 @@ public class HeightProfileData {
    * this point in meters</li> </lu>
    */
   public static final class Waypoint {
-    private Coordinate coordinate;
+    private GeoLocation coordinate;
     private double distance;
     private double height;
     private double time;
     private 
 
-    Waypoint(Coordinate coordinate, double distance, double height, double time) {
+    Waypoint(GeoLocation coordinate, double distance, double height, double time) {
       this.coordinate = coordinate;
       this.distance = distance;
       this.height = height;
@@ -57,7 +59,7 @@ public class HeightProfileData {
     /**
      * @return the coordinate of this waypoint in lat,lng.
      */
-    public Coordinate getCoordinate() {
+    public GeoLocation getLocation() {
       return coordinate;
     }
   }
@@ -79,7 +81,7 @@ public class HeightProfileData {
    * @param height
    *          height of this point in meters.
    */
-  public void put(Coordinate coordinate, double distance, double time, double height) {
+  public void put(GeoLocation coordinate, double distance, double time, double height) {
     dataValues.add(new Waypoint(coordinate, distance, height, time));
   }
 

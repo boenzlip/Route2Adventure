@@ -148,7 +148,7 @@ public class GoogleDirectionsServer extends AbstractServer {
       Iterator<Waypoint> iterator = data.iterator();
       while (iterator.hasNext()) {
         Waypoint waypoint = iterator.next();
-        heightData.put(waypoint.getCoordinate(), waypoint.getDistance(), waypoint.getTime(),
+        heightData.put(waypoint.getLocation(), waypoint.getDistance(), waypoint.getTime(),
             waypoint.getHeight());
       }
 
@@ -216,7 +216,7 @@ public class GoogleDirectionsServer extends AbstractServer {
     Iterator<Waypoint> iterator = heightData.iterator();
     while (iterator.hasNext()) {
       Waypoint tuple = iterator.next();
-      trak.addTrackpoint(new Trackpoint(tuple.getCoordinate().y, tuple.getCoordinate().x));
+      trak.addTrackpoint(new Trackpoint(tuple.getLocation().getLongitude(), tuple.getLocation().getLatitude()));
     }
     HashMap createEncodings = PolylineEncoder.createEncodings(trak, 17, 1);
     JSONObject overviewPolyline = new JSONObject();
@@ -267,13 +267,13 @@ public class GoogleDirectionsServer extends AbstractServer {
         step.put("distance", stepDistance);
 
         JSONObject startStep = new JSONObject();
-        startStep.put("lng", lastWaypoint.getCoordinate().x);
-        startStep.put("lat", lastWaypoint.getCoordinate().y);
+        startStep.put("lng", lastWaypoint.getLocation().getLatitude());
+        startStep.put("lat", lastWaypoint.getLocation().getLongitude());
         step.put("start_location", startStep);
 
         JSONObject endStep = new JSONObject();
-        endStep.put("lng", tuple.getCoordinate().x);
-        endStep.put("lat", tuple.getCoordinate().y);
+        endStep.put("lng", tuple.getLocation().getLatitude());
+        endStep.put("lat", tuple.getLocation().getLongitude());
         step.put("end_location", endStep);
 
         steps.put(step);
@@ -288,13 +288,13 @@ public class GoogleDirectionsServer extends AbstractServer {
 
     // Start location.
     JSONObject startLocation = new JSONObject();
-    startLocation.put("lat", heightData.first().getCoordinate().y);
-    startLocation.put("lng", heightData.first().getCoordinate().x);
+    startLocation.put("lat", heightData.first().getLocation().getLongitude());
+    startLocation.put("lng", heightData.first().getLocation().getLatitude());
     leg.put("start_location", startLocation);
 
     JSONObject endLocation = new JSONObject();
-    endLocation.put("lat", heightData.last().getCoordinate().y);
-    endLocation.put("lng", heightData.last().getCoordinate().x);
+    endLocation.put("lat", heightData.last().getLocation().getLongitude());
+    endLocation.put("lng", heightData.last().getLocation().getLatitude());
     leg.put("end_location", endLocation);
 
 

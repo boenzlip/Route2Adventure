@@ -7,12 +7,15 @@ import java.util.List;
 import net.orxonox.gpr.data.HeightProfileData;
 import net.orxonox.gpr.data.MapsTileRouteData;
 import net.orxonox.gpr.graph.BasicDirectedXYZNode;
+import net.orxonox.gpr.graph.GeoLocation;
 
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.GeodeticCalculator;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+
+import com.vividsolutions.jts.geom.Coordinate;
 
 public class HeightProfileStore implements
     IStore<MapsTileRouteData, HeightProfileData> {
@@ -41,11 +44,11 @@ public class HeightProfileStore implements
 
     double totalDistance = 0.0;
     double totalTime = 0.0;
-    BasicDirectedXYZNode lastNode = null;
+    GeoLocation lastLocation = null;
 
     @SuppressWarnings("unchecked")
-    Iterator<BasicDirectedXYZNode> points = descriptor.getPath().iterator();
-    List<BasicDirectedXYZNode> reversePoints = new ArrayList<BasicDirectedXYZNode>(
+    Iterator<GeoLocation> points = descriptor.getPath().iterator();
+    List<GeoLocation> reversePoints = new ArrayList<GeoLocation>(
         descriptor.getPath().size());
     while (points.hasNext()) {
       reversePoints.add(0, points.next());
@@ -54,26 +57,26 @@ public class HeightProfileStore implements
     points = reversePoints.iterator();
     while (points.hasNext()) {
 
-      BasicDirectedXYZNode node = (BasicDirectedXYZNode) points.next();
+      GeoLocation location = points.next();
       double distance = 0; // meters.
       double time = 0; // seconds.
       double horizWalkingSpeed = 1000.0 / (60.0 * 60.0); // 1000m horizontal [m/s]
       double vertWalkingSpeed = 400.0 / (60.0 * 60.0); // 400m vertical path [m/s]
-      if (lastNode != null) {
-        calc.setStartingGeographicPoint(lastNode.getCoordinate().x,
-            lastNode.getCoordinate().y);
-        calc.setDestinationGeographicPoint(node.getCoordinate().x,
-            node.getCoordinate().y);
+      if (lastLocation != null) {
+        calc.setStartingGeographicPoint(lastLocation.getLatitude(),
+            lastLocation.getLongitude());
+        calc.setDestinationGeographicPoint(location.getLatitude(),
+            location.getLongitude());
         distance = calc.getOrthodromicDistance();
 
-        double deltaHeight = Math.abs(lastNode.getHeight() - node.getHeight()); // meters
+        double deltaHeight = Math.abs(lastLocation.getHeight() - location.getHeight()); // meters
         time = distance / horizWalkingSpeed + deltaHeight / vertWalkingSpeed;
       }
       totalDistance += distance;
       totalTime += time;
 
-      profileData.put(node.getCoordinate(), totalDistance, totalTime, node.getHeight());
-      lastNode = node;
+      profileData.put(location, totalDistance, totalTime, location.getHeight());
+      lastLocation = location;
     }
 
     return profileData;
