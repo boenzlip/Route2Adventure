@@ -5,33 +5,41 @@
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 
 <style type="text/css">
-html { 
-    height: 100%;
-    font-family:Arial, sans-serif;
-    font-size:small;
+html {
+  height: 100%;
+  font-family: Arial, sans-serif;
+  font-size: small;
 }
-body { height: 100%; margin: 15px; padding: 0px } 
-#map_canvas{
-    width: 100%; 
-    height: 100%;
+
+body {
+  height: 100%;
+  margin: 15px;
+  padding: 0px
 }
-.contextmenu{
-    visibility:hidden;
-    background:#ffffff;
-    border:1px solid #8888FF;
-    z-index: 10;  
-    position: relative;
-    width: 140px;
-    font-family:Arial, sans-serif;
-    text-decoration:none;
-    color:#4444ff;
-    font-size:small;
+
+#map_canvas {
+  width: 100%;
+  height: 100%;
 }
-.contextmenu div{
-    padding-left: 5px
-    }
-    
-/* JQUERY PLOT STUFF */      
+
+.contextmenu {
+  visibility: hidden;
+  background: #ffffff;
+  border: 1px solid #8888FF;
+  z-index: 10;
+  position: relative;
+  width: 140px;
+  font-family: Arial, sans-serif;
+  text-decoration: none;
+  color: #4444ff;
+  font-size: small;
+}
+
+.contextmenu div {
+  padding-left: 5px
+}
+
+/* JQUERY PLOT STUFF */
 .jqplot-cursor-legend {
   width: 160px;
   font-family: "Arial, sans-serif";
@@ -42,412 +50,422 @@ td.jqplot-cursor-legend-swatch {
   width: 1.3em;
 }
 
-div.jqplot-cursor-legend-swatch {
-/*      width: 15px;*/
-}      
+div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
+  
+}
 </style>
 
-<script language="javascript" type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script> 
-<script language="javascript" type="text/javascript" src="/htdoc/js/jquery/jquery-1.4.4.min.js?contentType=text/javascript"></script> 
-<script language="javascript" type="text/javascript" src="/htdoc/js/jquery/jquery.jqplot.js?contentType=text/javascript"></script>
-<script language="javascript" type="text/javascript" src="/htdoc/js/jquery/plugins/jqplot.cursor.js?contentType=text/javascript"></script>
-<script language="javascript" type="text/javascript" src="/htdoc/js/jquery/plugins/jqplot.canvasTextRenderer.min.js?contentType=text/javascript"></script>
-<script language="javascript" type="text/javascript" src="/htdoc/js/jquery/plugins/jqplot.canvasAxisLabelRenderer.min.js?contentType=text/javascript"></script>
+<script language="javascript" type="text/javascript"
+  src="http://maps.google.com/maps/api/js?sensor=false"></script>
+<script language="javascript" type="text/javascript"
+  src="/htdoc/js/jquery/jquery-1.4.4.min.js?contentType=text/javascript"></script>
+<script language="javascript" type="text/javascript"
+  src="/htdoc/js/jquery/jquery.jqplot.js?contentType=text/javascript"></script>
+<script language="javascript" type="text/javascript"
+  src="/htdoc/js/jquery/plugins/jqplot.cursor.js?contentType=text/javascript"></script>
+<script language="javascript" type="text/javascript"
+  src="/htdoc/js/jquery/plugins/jqplot.canvasTextRenderer.min.js?contentType=text/javascript"></script>
+<script language="javascript" type="text/javascript"
+  src="/htdoc/js/jquery/plugins/jqplot.canvasAxisLabelRenderer.min.js?contentType=text/javascript"></script>
 
 
 <script language="javascript" type="text/javascript">
+  var markerContainer = {
+    size : 0,
+    elements : [ null, null ],
 
+    first : function(marker) {
+      this.elements[0] = marker;
+    },
 
+    last : function(marker) {
+      this.elements[this.elements.length - 1] = marker;
+    },
 
-var markerContainer = {
-  size : 0,
-  elements : [null, null],
-  
-  
-  first : function(marker) {
-    this.elements[0] = marker;
-  },
-  
-  last : function(marker) {
-    this.elements[this.elements.length - 1] = marker;
-  },
-  
-  add : function(marker) {
-    var distanceArray = new Array();
+    add : function(marker) {
+      var distanceArray = new Array();
 
-    for( var i = 0; i < this.elements.length - 1; i++) {
-      distanceArray[i] = this.distance(this.elements[i], marker) + this.distance(this.elements[i + 1], marker);
-    }
-    var index = 0;
-    var minValue = distanceArray[0];
-    for( var j = 1; j < distanceArray.length; j++) {
-      if( distanceArray[j] < minValue) {
-        minValue = distanceArray[j];
-        index = j;
+      // nearest points;
+      for ( var i = 0; i < this.elements.length - 1; i++) {
+        distanceArray[i] = this.distance(this.elements[i], marker) + this.distance(this.elements[i + 1], marker);
       }
-    }
-    //alert(index);
-    this.elements.splice(index + 1, 0, marker);
-  },
-  
-  clear : function() {
-    this.elements = [];
-  },
-  
-  distance: function(m1, m2) {
-    a = m1.getPosition();
-    b = m2.getPosition();
-    var sum = Math.pow(a.lat() - b.lat(), 2) + Math.pow(b.lng() - b.lng(), 2);
-    return Math.sqrt(sum);
-  },
-  
-  
-  getWaypointParams : function() {
-    var serializationString = "";
-    for( var i = 1; i < this.elements.length - 1; i++) {
-      serializationString += "" + this.elements[i].getPosition().lat() + "," + this.elements[i].getPosition().lng();
-      if(i != this.elements.length - 2) {
-        serializationString += "/";
+      var index = 0;
+      var minValue = distanceArray[0];
+      for ( var j = 1; j < distanceArray.length; j++) {
+        if (distanceArray[j] < minValue) {
+          minValue = distanceArray[j];
+          index = j;
+        }
       }
+      //alert(index);
+      this.elements.splice(index + 1, 0, marker);
+    },
+
+    clear : function() {
+      this.elements = [];
+    },
+
+    distance : function(m1, m2) {
+      a = m1.getPosition();
+      b = m2.getPosition();
+      var sum = Math.pow(a.lat() - b.lat(), 2) + Math.pow(b.lng() - b.lng(), 2);
+      return Math.sqrt(sum);
+    },
+
+    getWaypointParams : function() {
+      var serializationString = "";
+      for ( var i = 1; i < this.elements.length - 1; i++) {
+        serializationString += "" + this.elements[i].getPosition().lat() + "," + this.elements[i].getPosition().lng();
+        if (i != this.elements.length - 2) {
+          serializationString += "/";
+        }
+      }
+      return serializationString;
     }
-    return serializationString;
-  }
-    
-};
 
+  };
 
+  var map;
+  // Start/Stop positions.
+  var lastClickedPoint; // is updated in function setMenuXY(caurrentLatLng)
+  var startMarker;
+  var stopMarker;
+  var routingLayer;
+  var heightMapPlot;
+  var routePolyline;
+  var eventRoutePolyline;
+  var directionsPoint;
 
-
-
-var map;
-// Start/Stop positions.
-var lastClickedPoint; // is updated in function setMenuXY(caurrentLatLng)
-var startMarker;
-var stopMarker;
-var routingLayer;
-var heightMapPlot;
-var routePolyline;
-var directionsPoint;
-
-
-function initialize() {
+  function initialize() {
     var latlng = new google.maps.LatLng(46.785, 7.344);
     var myOptions = {
-     zoom: 8,
-     center: latlng,
-     mapTypeId: google.maps.MapTypeId.TERRAIN
+      zoom : 8,
+      center : latlng,
+      mapTypeId : google.maps.MapTypeId.TERRAIN
     };
-	map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
-	/* -------- Context Menu ------------ */
-	google.maps.event.addListener(map, "rightclick",function(event){ showContextMenu(event.latLng); });
-	google.maps.event.addListener(map, "click",function(event){ hideContextMenu(); });
+    map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+    /* -------- Context Menu ------------ */
+    google.maps.event.addListener(map, "rightclick", function(event) {
+      showContextMenu(event.latLng);
+    });
+    google.maps.event.addListener(map, "click", function(event) {
+      hideContextMenu();
+    });
 
-	
-	/* -------- Set Marker ------------ */
-	var initialStartMarkerPosition = new google.maps.LatLng(90, 0);
-	var initialStopMarkerPosition = new google.maps.LatLng(0, 0);
-	startMarker = new google.maps.Marker( { position: initialStartMarkerPosition, 
-		      map: map, 
-		      title:"Start",
-		      icon:"htdoc/start_icon.png"
-	} );
-	startMarker.setVisible(false);
-	stopMarker = new google.maps.Marker( { position: initialStopMarkerPosition, 
-		      map: map, 
-		      title:"Destination",
-		      icon:"htdoc/end_icon.png"
-	} );
-	stopMarker.setVisible(false);
-	
-	
-	/* -------- Overlay ------------ */
+    /* -------- Set Marker ------------ */
+    var initialStartMarkerPosition = new google.maps.LatLng(90, 0);
+    var initialStopMarkerPosition = new google.maps.LatLng(0, 0);
+    startMarker = new google.maps.Marker({
+      position : initialStartMarkerPosition,
+      map : map,
+      title : "Start",
+      icon : "htdoc/start_icon.png"
+    });
+    startMarker.setVisible(false);
+    stopMarker = new google.maps.Marker({
+      position : initialStopMarkerPosition,
+      map : map,
+      title : "Destination",
+      icon : "htdoc/end_icon.png"
+    });
+    stopMarker.setVisible(false);
 
-	var routingLayerOptions = {
-		  getTileUrl: tileURL,
-		  tileSize: new google.maps.Size(256, 256),
-		  isPng: true,
-		  opacity: 0.5
-	};
-	routingLayer = new google.maps.ImageMapType(routingLayerOptions);
-	
-	
-	 /* -------- Directions ------------ */
-	 directionsRenderer = new google.maps.DirectionsRenderer();
-   directionsRenderer.setMap(map);
-  
-	 directionsPoint = new google.maps.Marker({
-    position: new google.maps.LatLng(-25.363882,131.044922),
-    map: map,
-    title:"Mouse"
-   });
-	 directionsPoint.setVisible(false);
-	 directionsPoint.setDraggable(true);
-	 directionsPoint.setClickable(false);
-	 google.maps.event.addListener(directionsPoint, 'click', handleMarkerClick);
-	 google.maps.event.addListener(directionsPoint, 'drag', handleMarkerDrag);
-	 google.maps.event.addListener(directionsPoint, 'dragstart', handleMarkerDragStart);
-	 google.maps.event.addListener(directionsPoint, 'dragend', handleMarkerDragEnd);
+    /* -------- Overlay ------------ */
 
-	
-	//map.overlayMapTypes.insertAt(0, routingLayer);
-	
-	
-	/* -------- JQuery Plot ------------ */
-	$.jqplot.config.enablePlugins = true;           	                  
-  
- }
- 
-function getCanvasXY(caurrentLatLng){
-      var scale = Math.pow(2, map.getZoom());
-     var nw = new google.maps.LatLng(
-         map.getBounds().getNorthEast().lat(),
-         map.getBounds().getSouthWest().lng()
-     );
-     var worldCoordinateNW = map.getProjection().fromLatLngToPoint(nw);
-     var worldCoordinate = map.getProjection().fromLatLngToPoint(caurrentLatLng);
-     var caurrentLatLngOffset = new google.maps.Point(
-         Math.floor((worldCoordinate.x - worldCoordinateNW.x) * scale),
-         Math.floor((worldCoordinate.y - worldCoordinateNW.y) * scale)
-     );
-     return caurrentLatLngOffset;
+    var routingLayerOptions = {
+      getTileUrl : tileURL,
+      tileSize : new google.maps.Size(256, 256),
+      isPng : true,
+      opacity : 0.5
+    };
+    routingLayer = new google.maps.ImageMapType(routingLayerOptions);
+
+    /* -------- Directions ------------ */
+    directionsRenderer = new google.maps.DirectionsRenderer();
+    directionsRenderer.setMap(map);
+
+    directionsPoint = new google.maps.Marker({
+      position : new google.maps.LatLng(-25.363882, 131.044922),
+      map : map,
+      title : "Mouse",
+      zIndex : 3
+    });
+    directionsPoint.setVisible(false);
+    directionsPoint.setDraggable(true);
+    directionsPoint.setClickable(false);
+    google.maps.event.addListener(directionsPoint, 'click', handleMarkerClick);
+    google.maps.event.addListener(directionsPoint, 'drag', handleMarkerDrag);
+    google.maps.event.addListener(directionsPoint, 'dragstart', handleMarkerDragStart);
+    google.maps.event.addListener(directionsPoint, 'dragend', handleMarkerDragEnd);
+
+    //map.overlayMapTypes.insertAt(0, routingLayer);
+
+    /* -------- JQuery Plot ------------ */
+    $.jqplot.config.enablePlugins = true;
+
   }
-  function setMenuXY(caurrentLatLng){
+
+  function getCanvasXY(caurrentLatLng) {
+    var scale = Math.pow(2, map.getZoom());
+    var nw = new google.maps.LatLng(map.getBounds().getNorthEast().lat(), map.getBounds().getSouthWest().lng());
+    var worldCoordinateNW = map.getProjection().fromLatLngToPoint(nw);
+    var worldCoordinate = map.getProjection().fromLatLngToPoint(caurrentLatLng);
+    var caurrentLatLngOffset = new google.maps.Point(Math.floor((worldCoordinate.x - worldCoordinateNW.x) * scale),
+        Math.floor((worldCoordinate.y - worldCoordinateNW.y) * scale));
+    return caurrentLatLngOffset;
+  }
+  function setMenuXY(caurrentLatLng) {
     var mapWidth = $('#map_canvas').width();
     var mapHeight = $('#map_canvas').height();
     var menuWidth = $('.contextmenu').width();
     var menuHeight = $('.contextmenu').height();
     var clickedPosition = getCanvasXY(caurrentLatLng);
     lastClickedPoint = caurrentLatLng;
-    var x = clickedPosition.x ;
-    var y = clickedPosition.y ;
+    var x = clickedPosition.x;
+    var y = clickedPosition.y;
 
-     if((mapWidth - x ) < menuWidth)
-         x = x - menuWidth;
-    if((mapHeight - y ) < menuHeight)
-        y = y - menuHeight;
+    if ((mapWidth - x) < menuWidth)
+      x = x - menuWidth;
+    if ((mapHeight - y) < menuHeight)
+      y = y - menuHeight;
 
-    $('.contextmenu').css('left',x  );
-    $('.contextmenu').css('top',y );
-    };
-  function showContextMenu(caurrentLatLng  ) {
-        var projection;
-        var contextmenuDir;
-        projection = map.getProjection() ;
-        $('.contextmenu').remove();
-            contextmenuDir = document.createElement("div");
-          contextmenuDir.className  = 'contextmenu';
-          contextmenuDir.innerHTML = "<a href='javascript:routeStart()' id='menu1'><div class=context>Route from here<\/div><\/a>" + 
-                                     "<a href='javascript:routeEnd()' id='menu2'><div class=context>Route to here<\/div><\/a>";
-        $(map.getDiv()).append(contextmenuDir);
-        
-        setMenuXY(caurrentLatLng);
+    $('.contextmenu').css('left', x);
+    $('.contextmenu').css('top', y);
+  };
+  function showContextMenu(caurrentLatLng) {
+    var projection;
+    var contextmenuDir;
+    projection = map.getProjection();
+    $('.contextmenu').remove();
+    contextmenuDir = document.createElement("div");
+    contextmenuDir.className = 'contextmenu';
+    contextmenuDir.innerHTML = "<a href='javascript:routeStart()' id='menu1'><div class=context>Route from here<\/div><\/a>"
+        + "<a href='javascript:routeEnd()' id='menu2'><div class=context>Route to here<\/div><\/a>";
+    $(map.getDiv()).append(contextmenuDir);
 
-        contextmenuDir.style.visibility = "visible";
-   }
-  
-   function hideContextMenu() {
-	   $('.contextmenu').remove();
-   }
-   
-   
-   function updateOverlay() {
-     
-	   // Make sure there is a start and stop location.
-	   if(startMarker.getVisible() && stopMarker.getVisible()) {
-	     
-	     // redefine the route.
-	     dataUrl = directionsDataURL(new google.maps.Point(0.0, 0.0), 0);
-	     $.getJSON(dataUrl, function(data) {
-	       //alert(data.route[0].overview_polyline.points);
-	       //alert(data.summary);
-	       //directionsRenderer.setDirections(response);
-	       
-	       var polyOptions = {
-	           strokeColor: '#0000ff',
-	           strokeOpacity: 1.0,
-	           strokeWeight: 2
-         }
-	       routePolyline = new google.maps.Polyline(polyOptions);	       
-	       routePolyline.setPath(google.maps.geometry.encoding.decodePath(data.route[0].overview_polyline.points));
-	       routePolyline.setMap(map);
-	       
-	       google.maps.event.addListener(routePolyline, 'click', handleClickEvent);
-	       google.maps.event.addListener(routePolyline, 'mouseover', handleMouseOverEvent);
+    setMenuXY(caurrentLatLng);
 
+    contextmenuDir.style.visibility = "visible";
+  }
 
-	     });
+  function hideContextMenu() {
+    $('.contextmenu').remove();
+  }
 
-	     
-		   //map.overlayMapTypes.clear();
-		   //map.overlayMapTypes.insertAt(0, routingLayer);
+  function updateOverlay() {
 
-		   // Update data also.
-       dataUrl = geoDataURL(new google.maps.Point(0.0, 0.0), 0);
-		   $.getJSON(dataUrl, function(data) {
-		     
-		     $.jqplot.eventListenerHooks.push(['jqplotMouseMove', myMove]);
-		     
-		     // Full jpolt options: http://www.jqplot.com/docs/files/jqPlotOptions-txt.html#jqPlot_Options
-		     heightMapPlot = $.jqplot('chart1', [data], {
-		       seriesDefaults:{neighborThreshold:0, showMarker: false},
-		       series:[
-		         {label:'walk'}
-		        
-		       ],
-		       cursor:{
-		         showVerticalLine:true,
-		         showTooltip: true,
-		         followMouse: true,
-		         showTooltipDataPosition:true,
-		         zoom:false,
-		         intersectionThreshold: Math.round($('#chart1').width() / data.length),
-		         tooltipFormatString: '%s %s km @ %s m'
-		       },
-		       legend:{
-		         location:'nw',
-		         xoffset: 310,
-		         yoffset: 100
-		       },
-		       axes:{
-		         yaxis: {
-		           label: 'Height',
-		           autoscale: false,
-               labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+    // Make sure there is a start and stop location.
+    if (startMarker.getVisible() && stopMarker.getVisible()) {
 
-		         },
-		         xaxis: {
-		           label: 'Distance',
-		           autoscale: false,
-		           tickInterval: Math.max(1, Math.round(data.length / 50)) ,
-		           pad: 0.0,
-		           padMin: 0.0,
-		           padMax: 0.0,
-		           labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+      // redefine the route.
+      dataUrl = directionsDataURL(new google.maps.Point(0.0, 0.0), 0);
+      $.getJSON(dataUrl, function(data) {
+        //alert(data.route[0].overview_polyline.points);
+        //alert(data.summary);
+        //directionsRenderer.setDirections(response);
 
-		         }
-		       },
-		       axesDefaults:{tickOptions:{formatString:"%i"}, autoscale:true, useSeriesColor:true}  
-		     }).replot();
-		     
+        var polyOptions = {
+          strokeColor : '#0000ff',
+          strokeOpacity : 1.0,
+          strokeWeight : 2,
+          zIndex : 1
+        }
+        routePolyline = new google.maps.Polyline(polyOptions);
+        routePolyline.setPath(google.maps.geometry.encoding.decodePath(data.route[0].overview_polyline.points));
+        routePolyline.setMap(map);
 
-		    
-    		// Here is how you attach the custom callback to the mouse move event on the plot.
-    		
-    		$('chart1').append('<div id="myToolTip" style="position:absolute;display:none;background:#E5DACA;padding:4px;"></div>');
+        var eventPolyOptions = {
+            strokeColor : '#00ffff',
+            strokeOpacity : 0.0,
+            strokeWeight : 80,
+            zIndex : 0
+          }
+        eventRoutePolyline = new google.maps.Polyline(eventPolyOptions);
+        eventRoutePolyline.setPath(google.maps.geometry.encoding.decodePath(data.route[0].overview_polyline.points));
+        eventRoutePolyline.setMap(map);
 
+        google.maps.event.addListener(eventRoutePolyline, 'mousedown', handleClickEvent);
+        google.maps.event.addListener(eventRoutePolyline, 'mousemove', handleMouseOverEvent);
 
-		     
-		     //heightMapPlot.preDrawLegendHooks = graphHook;
-		   }); 
-	   }
-   }
-   
-   function handleClickEvent(event) {
-     alert("click" + event);
-   }
-   function handleMouseOverEvent(event) {
-     //alert("mouseover" + event);
-     directionsPoint.setPosition(event.latLng);
-     directionsPoint.setVisible(true);
-   }
-   function handleMarkerClick(event) {
-     alert("click icons");
-   }
-   function handleMarkerDrag(event) {
-     
-   }
-   function handleMarkerDragStart(event) {
-     // removing any old polyline.
-     if(routePolyline != null) {
-       routePolyline.setMap(null);
-     } 
-   }
-   function handleMarkerDragEnd(event) {
-     
-     newMarker = new google.maps.Marker({
-       position: event.latLng,
-       map: map,
-       title:"Waypoint"
       });
-     newMarker.setVisible(true);
-     newMarker.setDraggable(false);
-     newMarker.setClickable(false);
-     
-     markerContainer.add(newMarker);
-     
-     directionsPoint.setVisible(false);
-     
-     updateOverlay();
-   }
-   
-   // Marker for mte
-   function myMove (ev, gridpos, datapos, neighbor, plot) {
-     //alert(gridpos.x + " - " + gridpos.y + " data: " + datapos.x + " - " + datapos.y + " - " + plot);
-    }
-   
-   
-   function routeStart() {
-	   hideContextMenu();
-	   startMarker.setPosition(lastClickedPoint);
-	   startMarker.setVisible(true);
-	   
-	   // Manage point container.
-	   markerContainer.first(startMarker);
-	   
-     // removing any old polyline.
-     if(routePolyline != null) {
-       routePolyline.setMap(null);
-	   } 
-	   
-	   updateOverlay();
-   }
-   
-   function routeEnd() {
-	   hideContextMenu();
-	   stopMarker.setPosition(lastClickedPoint);
-	   stopMarker.setVisible(true);
-	   
-	   // Manage point container.
-	   markerContainer.last(stopMarker);
-	   
-     // removing any old polyline.
-     if(routePolyline != null) {
-       routePolyline.setMap(null);
-     } 
-	   
-	   updateOverlay();
-   }
-   
-   function directionsDataURL(coord, zoom) {
-     return "http://localhost:8080/directions/?" + urlArguments(coord, zoom);
-    }
-   
-   function geoDataURL(coord, zoom) {
-     return "http://localhost:8080/geodata/?" + urlArguments(coord, zoom);
-    }
-   
-   function tileURL(coord, zoom) {
-     return "http://localhost:8080/tiles/?" + urlArguments(coord, zoom);
-    }
-   
-   function urlArguments(coord, zoom) {
-     var startPoint = startMarker.getPosition();
-     var destinationPoint = stopMarker.getPosition();
-     //return "http://mt3.google.com/mapstt?" +
-     // "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + "&client=api";
 
-       return "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + '&startLat=' + 
-         startPoint.lat() + '&startLng=' + startPoint.lng() +  '&endLat=' + 
-         destinationPoint.lat() + '&endLng=' + destinationPoint.lng() + "&waypoints=" + 
-         markerContainer.getWaypointParams();
-   }
-   
+      //map.overlayMapTypes.clear();
+      //map.overlayMapTypes.insertAt(0, routingLayer);
+
+      // Update data also.
+      dataUrl = geoDataURL(new google.maps.Point(0.0, 0.0), 0);
+      $.getJSON(dataUrl, function(data) {
+
+        $.jqplot.eventListenerHooks.push([ 'jqplotMouseMove', myMove ]);
+
+        // Full jpolt options: http://www.jqplot.com/docs/files/jqPlotOptions-txt.html#jqPlot_Options
+        heightMapPlot = $.jqplot('chart1', [ data ], {
+          seriesDefaults : {
+            neighborThreshold : 0,
+            showMarker : false
+          },
+          series : [ {
+            label : 'walk'
+          }
+
+          ],
+          cursor : {
+            showVerticalLine : true,
+            showTooltip : true,
+            followMouse : true,
+            showTooltipDataPosition : true,
+            zoom : false,
+            intersectionThreshold : Math.round($('#chart1').width() / data.length),
+            tooltipFormatString : '%s %s km @ %s m'
+          },
+          legend : {
+            location : 'nw',
+            xoffset : 310,
+            yoffset : 100
+          },
+          axes : {
+            yaxis : {
+              label : 'Height',
+              autoscale : false,
+              labelRenderer : $.jqplot.CanvasAxisLabelRenderer
+
+            },
+            xaxis : {
+              label : 'Distance',
+              autoscale : false,
+              tickInterval : Math.max(1, Math.round(data.length / 50)),
+              pad : 0.0,
+              padMin : 0.0,
+              padMax : 0.0,
+              labelRenderer : $.jqplot.CanvasAxisLabelRenderer
+
+            }
+          },
+          axesDefaults : {
+            tickOptions : {
+              formatString : "%i"
+            },
+            autoscale : true,
+            useSeriesColor : true
+          }
+        }).replot();
+
+        // Here is how you attach the custom callback to the mouse move event on the plot.
+
+        $('chart1').append(
+            '<div id="myToolTip" style="position:absolute;display:none;background:#E5DACA;padding:4px;"></div>');
+
+        //heightMapPlot.preDrawLegendHooks = graphHook;
+      });
+    }
+  }
+
+  function handleClickEvent(event) {
+    handleMarkerDragStart(event);
+  }
+  function handleMouseOverEvent(event) {
+    //alert("mouseover" + event);
+    directionsPoint.setPosition(event.latLng);
+    directionsPoint.setVisible(true);
+  }
+  function handleMarkerClick(event) {
+    alert("click icons");
+  }
+  function handleMarkerDrag(event) {
+
+  }
+  function handleMarkerDragStart(event) {
+    // removing any old polyline.
+    if (routePolyline != null) {
+      routePolyline.setMap(null);
+      eventRoutePolyline.setMap(null);
+    }
+  }
+  function handleMarkerDragEnd(event) {
+
+    newMarker = new google.maps.Marker({
+      position : event.latLng,
+      map : map,
+      title : "Waypoint"
+    });
+    newMarker.setVisible(true);
+    newMarker.setDraggable(false);
+    newMarker.setClickable(false);
+
+    markerContainer.add(newMarker);
+
+    directionsPoint.setVisible(false);
+
+    updateOverlay();
+  }
+
+  // Marker for mte
+  function myMove(ev, gridpos, datapos, neighbor, plot) {
+    //alert(gridpos.x + " - " + gridpos.y + " data: " + datapos.x + " - " + datapos.y + " - " + plot);
+  }
+
+  function routeStart() {
+    hideContextMenu();
+    startMarker.setPosition(lastClickedPoint);
+    startMarker.setVisible(true);
+
+    // Manage point container.
+    markerContainer.first(startMarker);
+
+    // removing any old polyline.
+    if (routePolyline != null) {
+      routePolyline.setMap(null);
+      eventRoutePolyline.setMap(null);
+    }
+
+    updateOverlay();
+  }
+
+  function routeEnd() {
+    hideContextMenu();
+    stopMarker.setPosition(lastClickedPoint);
+    stopMarker.setVisible(true);
+
+    // Manage point container.
+    markerContainer.last(stopMarker);
+
+    // removing any old polyline.
+    if (routePolyline != null) {
+      routePolyline.setMap(null);
+      eventRoutePolyline.setMap(null);
+    }
+
+    updateOverlay();
+  }
+
+  function directionsDataURL(coord, zoom) {
+    return "http://localhost:8080/directions/?" + urlArguments(coord, zoom);
+  }
+
+  function geoDataURL(coord, zoom) {
+    return "http://localhost:8080/geodata/?" + urlArguments(coord, zoom);
+  }
+
+  function tileURL(coord, zoom) {
+    return "http://localhost:8080/tiles/?" + urlArguments(coord, zoom);
+  }
+
+  function urlArguments(coord, zoom) {
+    var startPoint = startMarker.getPosition();
+    var destinationPoint = stopMarker.getPosition();
+    //return "http://mt3.google.com/mapstt?" +
+    // "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + "&client=api";
+
+    return "zoom=" + zoom + "&x=" + coord.x + "&y=" + coord.y + '&startLat=' + startPoint.lat() + '&startLng='
+        + startPoint.lng() + '&endLat=' + destinationPoint.lat() + '&endLng=' + destinationPoint.lng() + "&waypoints="
+        + markerContainer.getWaypointParams();
+  }
 </script>
 
 </head>
 <body onload="initialize()">
-  <div id="map_canvas" style="width:100%; height:100%"></div>
-  <div class="jqPlot" id="chart1" style="height:320px; width:100%;"></div>
+<div id="map_canvas" style="width: 100%; height: 100%"></div>
+<div class="jqPlot" id="chart1" style="height: 320px; width: 100%;"></div>
 </body>
 </html>
 
