@@ -225,7 +225,7 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
     // The origin for this image is 0,0.
     new google.maps.Point(0, 0),
     // The anchor for this image is the base of the flagpole at 0,32.
-    new google.maps.Point(16, 30));
+    new google.maps.Point(16, 25));
     //var shadow = new google.maps.MarkerImage('images/beachflag_shadow.png',
     // The shadow image is larger in the horizontal dimension
     // while the position and offset are the same as for the main image.
@@ -438,9 +438,9 @@ div.jqplot-cursor-legend-swatch { /*      width: 15px;*/
     currentDraggedPolylineIndex = index;
   }
   function handleMouseOutEvent(event) {
-    if (!markerIsDragged) {
-      directionsPoint.setVisible(false);
-    }
+    //if (!markerIsDragged) {
+    //  directionsPoint.setVisible(false);
+   // }
   }
   function handleMarkerClick(event) {
     alert("click icons");
