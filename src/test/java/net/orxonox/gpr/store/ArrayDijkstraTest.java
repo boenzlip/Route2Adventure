@@ -110,6 +110,52 @@ public class ArrayDijkstraTest {
 	}
 
 	@Test
+	public void shouldPerformViaSearch() {
+		// given
+		// a - -
+		// - x -
+		// - b c
+		Double[][][] graph = new Double[3][3][4];
+
+		graph[0][0][HEIGHT] = 0.;
+		graph[0][1][HEIGHT] = 1000.;
+		graph[0][2][HEIGHT] = 1000.;
+		graph[1][0][HEIGHT] = 1000.;
+		graph[1][1][HEIGHT] = 100.;
+		graph[1][2][HEIGHT] = 200.;
+		graph[2][0][HEIGHT] = 1000.;
+		graph[2][1][HEIGHT] = 1000.;
+		graph[2][2][HEIGHT] = 200.;
+
+		ArrayDijkstra arrayDijkstra = new ArrayDijkstra(graph);
+
+		// when
+		List<int[]> shortestPathAB = arrayDijkstra.shortestPath(new int[] { 0,
+				0 }, new int[] { 1, 2 });
+
+		List<int[]> shortestPathBC = arrayDijkstra.shortestPath(new int[] { 1,
+				2 }, new int[] { 2, 2 });
+
+		// then
+		// a -> b
+		int[] node12 = shortestPathAB.get(0);
+		assertTrue(node12[X] == 1 && node12[Y] == 2);
+
+		int[] node11 = shortestPathAB.get(1);
+		assertTrue(node11[X] == 1 && node11[Y] == 1);
+
+		int[] node00 = shortestPathAB.get(2);
+		assertTrue(node00[X] == 0 && node00[Y] == 0);
+
+		// b -> c
+		int[] nodeB = shortestPathBC.get(0);
+		assertTrue(nodeB[X] == 2 && nodeB[Y] == 2);
+
+		int[] nodeC = shortestPathBC.get(1);
+		assertTrue(nodeC[X] == 1 && nodeC[Y] == 2);
+	}
+
+	@Test
 	@Ignore
 	public void shouldFindRouteOnRandomHeightGraph() {
 		// given
